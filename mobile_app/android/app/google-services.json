@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "214014462007",
+    "project_id": "imago-bbd56",
+    "storage_bucket": "imago-bbd56.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214014462007:android:de6dabd73f9614682c97b2",
+        "android_client_info": {
+          "package_name": "org.lifechangerstouch.imago"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIuZIVFYj5_9WPCDLeAjtrRxUs8LdnKfM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,280 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #040510;
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Glassmorphism Classes */
+.glass-panel, .glass-header {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.glass-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    margin-bottom: 30px;
+}
+
+/* Typography */
+.logo {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 2rem;
+    color: #E5C07B;
+    letter-spacing: 2px;
+}
+
+.logo .tag {
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 400;
+    background: #3D5AFE;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 30px;
+}
+
+h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+p {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+}
+
+/* Forms and Inputs */
+#login-container .glass-panel {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-color: #3D5AFE;
+}
+
+/* Buttons */
+button {
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    outline: none;
+}
+
+.primary-btn {
+    padding: 15px;
+    background: linear-gradient(135deg, #5C6BC0, #3D5AFE);
+    color: white;
+    border-radius: 12px;
+    font-size: 1rem;
+    box-shadow: 0 4px 15px rgba(61, 90, 254, 0.4);
+}
+
+.primary-btn:hover {
+    box-shadow: 0 6px 20px rgba(61, 90, 254, 0.6);
+    transform: translateY(-2px);
+}
+
+.secondary-btn {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dashboard Layout */
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+
+@media (min-width: 768px) {
+    .dashboard-content {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 50px 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: #E5C07B;
+    background: rgba(229, 192, 123, 0.05);
+}
+
+.drop-zone p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Messages */
+.error-msg {
+    color: #ff5252;
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+.status-msg {
+    margin-top: 15px;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.status-msg.success {
+    color: #4CAF50;
+}
+
+.status-msg.error {
+    color: #ff5252;
+}
+
+.status-msg.loading {
+    color: #E5C07B;
+}
+
+/* Badge */
+.badge {
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 10px;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.chat-placeholder {
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Document List Styles */
+.document-list-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 0.3s ease;
+}
+
+.document-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.doc-info {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.delete-btn {
+    background: rgba(255, 82, 82, 0.1);
+    border: 1px solid rgba(255, 82, 82, 0.3);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 82, 82, 0.8);
+    transform: scale(1.1);
+}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imago Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="login-container" class="container">
+        <div class="glass-panel">
+            <h1 class="logo">Imago</h1>
+            <p class="subtitle">Admin Portal</p>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Admin Email" required />
+                <input type="password" id="password" placeholder="Password" required />
+                <button type="submit" class="primary-btn">Sign In</button>
+            </form>
+            <p id="login-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="container hidden">
+        <header class="glass-header">
+            <h1 class="logo">Imago <span class="tag">Admin</span></h1>
+            <button id="logout-btn" class="secondary-btn">Sign Out</button>
+        </header>
+
+        <main class="dashboard-content">
+            <div class="glass-panel upload-section">
+                <h2>Knowledge Base</h2>
+                <p>Upload sermons, teachings, and documents to enrich the AI's understanding.</p>
+                
+                <div id="drop-zone" class="drop-zone">
+                    <p>Drag & Drop a PDF/TXT/DOCX file here or click to browse</p>
+                    <input type="file" id="file-input" accept=".pdf,.txt,.docx" hidden />
+                </div>
+                
+                <div id="upload-status" class="status-msg"></div>
+                
+                <div class="document-list-container" style="margin-top: 30px;">
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 16px; margin-bottom: 15px; color: rgba(255,255,255,0.9);">Uploaded Documents</h3>
+                    <div id="document-list" class="document-list">
+                        <p style="color: rgba(255,255,255,0.5); font-size: 13px;">Loading documents...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel live-chats-section">
+                <h2>Live Counselling <span class="badge">Coming Soon</span></h2>
+                <p>Real-time human hand-offs will appear here.</p>
+                <div class="chat-placeholder">
+                    <p>No active sessions</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
