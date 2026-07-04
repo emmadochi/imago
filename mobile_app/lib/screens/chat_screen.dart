@@ -60,8 +60,8 @@ class _ChatScreenState extends State<ChatScreen>
   bool _isTyping = false;
   late final AudioRecorder _audioRecorder;
 
-  // Using Cloudflare Tunnel for ultra-reliable Wi-Fi access anywhere!
-  final String _backendUrl = 'https://texts-commented-hunt-victory.trycloudflare.com';
+  // Using Render for production!
+  final String _backendUrl = 'https://imago-nthk.onrender.com';
 
   @override
   void initState() {
