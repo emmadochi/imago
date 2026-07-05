@@ -600,6 +600,11 @@ async def delete_sermon_endpoint(filename: str):
 class PrayerRequest(BaseModel):
     request: str
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Render deployment."""
+    return {"status": "ok", "timestamp": datetime.datetime.now().isoformat()}
+
 class PrayerResponse(BaseModel):
     prayer: str
 
