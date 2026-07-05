@@ -5,7 +5,8 @@ import 'package:intl/intl.dart';
 import '../theme/imago_theme.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final void Function(int index)? onNavigate;
+  const HomeScreen({super.key, this.onNavigate});
 
   static const _devotionals = [
     {
@@ -205,11 +206,14 @@ class HomeScreen extends StatelessWidget {
                         sublabel: 'Audio archive',
                         gradient: const [Color(0xFF9575CD), Color(0xFF673AB7)],
                       ),
-                      _quickCard(
-                        icon: Icons.menu_book_rounded,
-                        label: 'Bible',
-                        sublabel: 'Read the Word',
-                        gradient: const [Color(0xFF4DB6AC), Color(0xFF009688)],
+                      GestureDetector(
+                        onTap: () => onNavigate?.call(1),
+                        child: _quickCard(
+                          icon: Icons.menu_book_rounded,
+                          label: 'Bible',
+                          sublabel: 'Read the Word',
+                          gradient: const [Color(0xFF4DB6AC), Color(0xFF009688)],
+                        ),
                       ),
                     ],
                   ),

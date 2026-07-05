@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'chat_screen.dart';
+import 'bible_screen.dart';
 import 'prayer_screen.dart';
 import 'profile_screen.dart';
 
@@ -15,11 +16,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    SizedBox.shrink(), // Placeholder for index 1
-    PrayerScreen(),
-    ProfileScreen(),
+  List<Widget> get _screens => [
+    HomeScreen(onNavigate: (i) => setState(() => _currentIndex = i)),
+    const BibleScreen(),
+    const PrayerScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -59,6 +60,7 @@ class _MainShellState extends State<MainShell> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _navItem(0, Icons.home_rounded, 'Home'),
+                _navItem(1, Icons.menu_book_rounded, 'Bible'),
                 _centralImagoButton(),
                 _navItem(2, Icons.volunteer_activism_rounded, 'Prayer'),
                 _navItem(3, Icons.person_rounded, 'Profile'),
