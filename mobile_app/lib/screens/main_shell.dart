@@ -5,6 +5,7 @@ import 'chat_screen.dart';
 import 'bible_screen.dart';
 import 'prayer_screen.dart';
 import 'profile_screen.dart';
+import '../theme/imago_theme.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -16,9 +17,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
+  // 5 tabs: Home(0) | Bible(1) | Chat/Imago(2) | Prayer(3) | Profile(4)
   List<Widget> get _screens => [
     HomeScreen(onNavigate: (i) => setState(() => _currentIndex = i)),
     const BibleScreen(),
+    const ChatScreen(),
     const PrayerScreen(),
     const ProfileScreen(),
   ];
@@ -62,8 +65,8 @@ class _MainShellState extends State<MainShell> {
                 _navItem(0, Icons.home_rounded, 'Home'),
                 _navItem(1, Icons.menu_book_rounded, 'Bible'),
                 _centralImagoButton(),
-                _navItem(2, Icons.volunteer_activism_rounded, 'Prayer'),
-                _navItem(3, Icons.person_rounded, 'Profile'),
+                _navItem(3, Icons.volunteer_activism_rounded, 'Prayer'),
+                _navItem(4, Icons.person_rounded, 'Profile'),
               ],
             ),
           ),
@@ -114,25 +117,14 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _centralImagoButton() {
+    final isSelected = _currentIndex == 2;
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const ChatScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              const begin = Offset(0.0, 1.0);
-              const end = Offset.zero;
-              const curve = Curves.easeOutCubic;
-              var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-              return SlideTransition(position: animation.drive(tween), child: child);
-            },
-          ),
-        );
-      },
+      onTap: () => setState(() => _currentIndex = 2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
             width: 52,
             height: 52,
             decoration: BoxDecoration(
@@ -144,22 +136,22 @@ class _MainShellState extends State<MainShell> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3D5AFE).withOpacity(0.5),
-                  blurRadius: 14,
-                  spreadRadius: 1,
+                  color: const Color(0xFF3D5AFE).withOpacity(isSelected ? 0.7 : 0.4),
+                  blurRadius: isSelected ? 20 : 14,
+                  spreadRadius: isSelected ? 2 : 1,
                 ),
               ],
             ),
             child: const Icon(Icons.church_rounded, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Imago',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected ? ImagoColors.gold : Colors.white,
             ),
           ),
         ],
