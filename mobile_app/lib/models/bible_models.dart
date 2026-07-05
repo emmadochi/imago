@@ -118,6 +118,6 @@ const List<BibleBook> kBibleBooks = [
 // Available translations bundled with the app
 const List<BibleTranslation> kBibleTranslations = [
   BibleTranslation(abbreviation: 'KJV', description: 'King James Version',    fileName: 'KJV.bbl.mybible'),
-  BibleTranslation(abbreviation: 'WEB', description: 'World English Bible',   fileName: 'WEB.bbl.mybible'),
+  BibleTranslation(abbreviation: 'BBE', description: 'Bible in Basic English',   fileName: 'BBE.bbl.mybible'),
   BibleTranslation(abbreviation: 'BSB', description: 'Berean Standard Bible', fileName: 'BSB.bbl.mybible'),
 ];

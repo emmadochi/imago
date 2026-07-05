@@ -45,12 +45,17 @@ class BibleService {
     final translation = kBibleTranslations.firstWhere((t) => t.abbreviation == abbreviation);
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = join(dir.path, 'bible', translation.fileName);
+    
+    final prefs = await SharedPreferences.getInstance();
+    final int cachedVersion = prefs.getInt('db_version_$abbreviation') ?? 0;
+    const int currentDbVersion = 2; // Bumped to 2 to force overwrite of buggy DBs
 
-    // Copy from assets if not already on disk
-    if (!File(dbPath).existsSync()) {
+    // Copy from assets if not already on disk OR if it's an older version
+    if (!File(dbPath).existsSync() || cachedVersion < currentDbVersion) {
       await Directory(join(dir.path, 'bible')).create(recursive: true);
       final bytes = await rootBundle.load('assets/bible/${translation.fileName}');
       await File(dbPath).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+      await prefs.setInt('db_version_$abbreviation', currentDbVersion);
     }
 
     final db = await openDatabase(dbPath, readOnly: true);
