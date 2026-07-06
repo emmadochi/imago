@@ -587,7 +587,7 @@ class _ChatScreenState extends State<ChatScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(text, style: ImagoText.body),
+                  SelectableText(text, style: ImagoText.body),
                   const SizedBox(height: 5),
                   Align(
                     alignment: Alignment.bottomRight,
