@@ -593,27 +593,28 @@ class _ChatScreenState extends State<ChatScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (!isUser) ...[
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => TtsService.instance.speak(text),
+                        child: Icon(Icons.volume_up_rounded, color: Colors.white.withOpacity(0.6), size: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   SelectableText(text, style: ImagoText.body),
                   const SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (!isUser)
-                        GestureDetector(
-                          onTap: () => TtsService.instance.speak(text),
-                          child: Icon(Icons.volume_up_rounded, color: Colors.white.withOpacity(0.5), size: 16),
-                        )
-                      else
-                        const SizedBox.shrink(),
-                      Text(
-                        DateFormat('hh:mm a').format(time),
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 10,
-                          color: Colors.white.withOpacity(0.35),
-                        ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      DateFormat('hh:mm a').format(time),
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10,
+                        color: Colors.white.withOpacity(0.35),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
