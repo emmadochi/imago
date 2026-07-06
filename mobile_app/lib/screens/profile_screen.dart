@@ -4,8 +4,41 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../services/tracking_service.dart';
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int _prayerStreak = 0;
+  int _conversations = 0;
+  List<Map<String, dynamic>> _moodHistory = [];
+  bool _isLoadingStats = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final streak = await TrackingService.instance.getPrayerStreak();
+    final chats = await TrackingService.instance.getConversationsCount();
+    final moodHist = await TrackingService.instance.getMoodHistory();
+
+    if (mounted) {
+      setState(() {
+        _prayerStreak = streak;
+        _conversations = chats;
+        _moodHistory = moodHist;
+        _isLoadingStats = false;
+      });
+    }
+  }
 
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -25,22 +58,14 @@ class ProfileScreen extends StatelessWidget {
     final email = user?.email ?? '';
     final firstName = displayName.split(' ').first;
 
-    // Simulated stats
-    const stats = {
-      'Prayer Streak': '7 days 🔥',
-      'Conversations': '14 this week',
-      'Saved Verses': '23 scriptures',
+    final stats = {
+      'Prayer Streak': '$_prayerStreak days 🔥',
+      'Conversations': '$_conversations total',
+      'Saved Verses': '0 scriptures',
     };
 
-    // Simulated mood history
-    const moodHistory = [
-      {'day': 'Mon', 'mood': 'Joyful', 'value': 0.9},
-      {'day': 'Tue', 'mood': 'Anxious', 'value': 0.3},
-      {'day': 'Wed', 'mood': 'Prayerful', 'value': 0.8},
-      {'day': 'Thu', 'mood': 'Tired', 'value': 0.4},
-      {'day': 'Fri', 'mood': 'Discouraged', 'value': 0.2},
-      {'day': 'Sat', 'mood': 'Joyful', 'value': 0.95},
-      {'day': 'Sun', 'mood': 'Prayerful', 'value': 0.85},
+    final moodHistory = _moodHistory.isNotEmpty ? _moodHistory : [
+      {'day': 'No data', 'mood': 'Neutral', 'value': 0.1},
     ];
 
     return Scaffold(

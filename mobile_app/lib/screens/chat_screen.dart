@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/imago_theme.dart';
+import '../services/tracking_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -195,6 +196,7 @@ class _ChatScreenState extends State<ChatScreen>
       _saveChats();
     });
     _scrollToBottom();
+    TrackingService.instance.incrementConversations();
 
     if (_isHandoff && _channel != null) {
       _channel!.sink.add(query);
@@ -467,7 +469,10 @@ class _ChatScreenState extends State<ChatScreen>
           final selected = _selectedMood == mood['name'];
           final color = mood['color'] as Color;
           return GestureDetector(
-            onTap: () => setState(() => _selectedMood = mood['name']),
+            onTap: () {
+              setState(() => _selectedMood = mood['name']);
+              TrackingService.instance.logMood(mood['name'], 0.8); // 0.8 as a default mock intensity
+            },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 10),

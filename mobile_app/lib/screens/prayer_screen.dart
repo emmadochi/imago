@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../theme/imago_theme.dart';
+import '../services/tracking_service.dart';
 
 class PrayerScreen extends StatefulWidget {
   const PrayerScreen({super.key});
@@ -79,8 +80,10 @@ class _PrayerScreenState extends State<PrayerScreen>
       } else {
         setState(() => _prayerResponse = _fallbackPrayer(request));
       }
+      TrackingService.instance.logPrayerGenerated();
     } catch (_) {
       setState(() => _prayerResponse = _fallbackPrayer(request));
+      TrackingService.instance.logPrayerGenerated();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
