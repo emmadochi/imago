@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../theme/imago_theme.dart';
 import '../services/tracking_service.dart';
+import '../services/tts_service.dart';
 
 class PrayerScreen extends StatefulWidget {
   const PrayerScreen({super.key});
@@ -51,6 +52,7 @@ class _PrayerScreenState extends State<PrayerScreen>
 
   @override
   void dispose() {
+    TtsService.instance.stop();
     _pulseController.dispose();
     _levitationController.dispose();
     _requestController.dispose();
@@ -298,11 +300,14 @@ class _PrayerScreenState extends State<PrayerScreen>
               IconButton(
                 icon: Icon(Icons.arrow_back_rounded,
                     color: Colors.white.withOpacity(0.6)),
-                onPressed: () => setState(() {
-                  _prayerStarted = false;
-                  _prayerResponse = null;
-                  _requestController.clear();
-                }),
+                onPressed: () {
+                  TtsService.instance.stop();
+                  setState(() {
+                    _prayerStarted = false;
+                    _prayerResponse = null;
+                    _requestController.clear();
+                  });
+                },
               ),
               Text(
                 'Your Prayer',
@@ -393,6 +398,38 @@ class _PrayerScreenState extends State<PrayerScreen>
                                   color: Colors.white.withOpacity(0.85),
                                   fontSize: 15.5,
                                   height: 1.7,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_prayerResponse != null) {
+                                    TtsService.instance.speak(_prayerResponse!);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF5C6BC0).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: const Color(0xFF5C6BC0).withOpacity(0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.volume_up_rounded, color: Color(0xFF5C6BC0), size: 18),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Listen',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Color(0xFF5C6BC0),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],

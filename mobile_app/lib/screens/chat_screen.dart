@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/imago_theme.dart';
 import '../services/tracking_service.dart';
+import '../services/tts_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -594,16 +595,25 @@ class _ChatScreenState extends State<ChatScreen>
                 children: [
                   SelectableText(text, style: ImagoText.body),
                   const SizedBox(height: 5),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Text(
-                      DateFormat('hh:mm a').format(time),
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.35),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (!isUser)
+                        GestureDetector(
+                          onTap: () => TtsService.instance.speak(text),
+                          child: Icon(Icons.volume_up_rounded, color: Colors.white.withOpacity(0.5), size: 16),
+                        )
+                      else
+                        const SizedBox.shrink(),
+                      Text(
+                        DateFormat('hh:mm a').format(time),
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.35),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
