@@ -23,10 +23,18 @@ class BibleService {
         orElse: () => kBibleTranslations.first,
       );
 
-  /// Initialize — copies assets to writable storage on first run.
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _currentTranslation = prefs.getString('bible_translation') ?? 'KJV';
+    final savedTranslation = prefs.getString('bible_translation') ?? 'KJV';
+    
+    // Ensure the saved translation actually exists in our models (fixes crash if a translation was removed)
+    if (kBibleTranslations.any((t) => t.abbreviation == savedTranslation)) {
+      _currentTranslation = savedTranslation;
+    } else {
+      _currentTranslation = 'KJV';
+      await prefs.setString('bible_translation', 'KJV');
+    }
+
     // Pre-copy all translation DBs so switching is instant
     for (final t in kBibleTranslations) {
       await _getDb(t.abbreviation);
