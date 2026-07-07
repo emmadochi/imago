@@ -12,7 +12,20 @@
           "package_name": "org.lifechangerstouch.imago"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "214014462007-h2703qaaumqo3fikvjaqbem3151en76h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.lifechangerstouch.imago",
+            "certificate_hash": "61162ed6fb0171f2cdd75e0c6553e4df50e9c24d"
+          }
+        },
+        {
+          "client_id": "214014462007-r76demti7u4oh544f5pi6nr62s375atf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBIuZIVFYj5_9WPCDLeAjtrRxUs8LdnKfM"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "214014462007-r76demti7u4oh544f5pi6nr62s375atf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

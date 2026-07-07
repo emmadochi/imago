@@ -280,3 +280,50 @@ onAuthStateChanged(auth, (user) => {
         connectWebSocket();
     }
 });
+
+// ==========================================
+// YouTube Sync Logic
+// ==========================================
+const youtubeUrlInput = document.getElementById('youtube-url');
+const youtubeSyncBtn = document.getElementById('youtube-sync-btn');
+const youtubeStatus = document.getElementById('youtube-status');
+
+if (youtubeSyncBtn) {
+    youtubeSyncBtn.addEventListener('click', async () => {
+        const url = youtubeUrlInput.value.trim();
+        if (!url) {
+            youtubeStatus.className = 'status-msg error';
+            youtubeStatus.textContent = 'Please enter a valid YouTube channel URL.';
+            return;
+        }
+
+        youtubeStatus.className = 'status-msg loading';
+        youtubeStatus.textContent = 'Syncing YouTube channel... This may take a minute depending on the number of videos.';
+
+        try {
+            const response = await fetch('/api/admin/youtube', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ channel_url: url })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                youtubeStatus.className = 'status-msg success';
+                youtubeStatus.textContent = data.message || 'Channel synced successfully!';
+                youtubeUrlInput.value = '';
+            } else {
+                youtubeStatus.className = 'status-msg error';
+                youtubeStatus.textContent = `Error: ${data.detail || 'Sync failed'}`;
+            }
+        } catch (error) {
+            youtubeStatus.className = 'status-msg error';
+            youtubeStatus.textContent = 'Network error occurred while syncing.';
+            console.error(error);
+        }
+    });
+}
+

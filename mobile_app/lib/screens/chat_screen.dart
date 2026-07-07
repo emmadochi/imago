@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/imago_theme.dart';
 import '../services/tracking_service.dart';
 import '../services/tts_service.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -563,6 +564,17 @@ class _ChatScreenState extends State<ChatScreen>
         ? const Color(0xFF5C6BC0).withOpacity(0.5)
         : Colors.white.withOpacity(0.12);
 
+    String youtubeId = '';
+    String displayText = text;
+    if (!isUser) {
+      final regex = RegExp(r'\[YOUTUBE:(.+?)\]');
+      final match = regex.firstMatch(text);
+      if (match != null) {
+        youtubeId = match.group(1) ?? '';
+        displayText = text.replaceAll(match.group(0)!, '').trim();
+      }
+    }
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -597,13 +609,30 @@ class _ChatScreenState extends State<ChatScreen>
                     Align(
                       alignment: Alignment.topRight,
                       child: GestureDetector(
-                        onTap: () => TtsService.instance.speak(text),
+                        onTap: () => TtsService.instance.speak(displayText),
                         child: Icon(Icons.volume_up_rounded, color: Colors.white.withOpacity(0.6), size: 18),
                       ),
                     ),
                     const SizedBox(height: 4),
                   ],
-                  SelectableText(text, style: ImagoText.body),
+                  SelectableText(displayText, style: ImagoText.body),
+                  if (youtubeId.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: YoutubePlayer(
+                        controller: YoutubePlayerController(
+                          initialVideoId: youtubeId,
+                          flags: const YoutubePlayerFlags(
+                            autoPlay: false,
+                            mute: false,
+                          ),
+                        ),
+                        showVideoProgressIndicator: true,
+                        progressIndicatorColor: const Color(0xFF3D5AFE),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 5),
                   Align(
                     alignment: Alignment.bottomRight,

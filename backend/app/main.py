@@ -17,6 +17,7 @@ from pathlib import Path
 DATA_DIR = Path("app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_FILE = DATA_DIR / "documents.json"
+YOUTUBE_CACHE_FILE = DATA_DIR / "youtube_cache.json"
 
 def load_documents() -> list:
     if not DOCS_FILE.exists():
@@ -30,6 +31,19 @@ def load_documents() -> list:
 def save_documents(docs: list):
     with open(DOCS_FILE, "w") as f:
         json.dump(docs, f, indent=4)
+
+def load_youtube_videos() -> list:
+    if not YOUTUBE_CACHE_FILE.exists():
+        return []
+    try:
+        with open(YOUTUBE_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_youtube_videos(videos: list):
+    with open(YOUTUBE_CACHE_FILE, "w") as f:
+        json.dump(videos, f, indent=4)
 
 # Load environment
 load_dotenv()
@@ -254,6 +268,15 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
     }
     mood_directive = mood_directives.get(mood, "Speak with empathy, grace, and biblical accuracy.")
 
+    # Load YouTube Videos
+    yt_videos = load_youtube_videos()
+    yt_context = ""
+    if yt_videos:
+        yt_context = "\n\nAvailable Pastor YouTube Videos:\n"
+        for v in yt_videos:
+            yt_context += f"- Title: '{v['title']}' (ID: {v['id']})\n"
+        yt_context += "\nIf the user's struggle perfectly matches a video topic, recommend it by appending exactly this markdown to your response: [YOUTUBE:id] (replace id with the video ID). Only recommend one video at most."
+
     # 4. Generate response using Gemini
     system_instruction = (
         "You are Imago, a highly interactive and compassionate virtual pastoral assistant for a Christian church. "
@@ -262,6 +285,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
         "When they share a struggle, weave the provided pastoral context naturally into your conversational response. "
         "Do not invent doctrines. "
         f"{mood_directive}"
+        f"{yt_context}"
     )
     
     # Build history for the Gemini contents list
@@ -683,6 +707,34 @@ async def prayer_endpoint(body: PrayerRequest):
         )
         return PrayerResponse(prayer=fallback_prayer)
 
+
+class YouTubeRequest(BaseModel):
+    channel_url: str
+
+@app.post("/api/admin/youtube")
+async def sync_youtube_channel(body: YouTubeRequest):
+    import yt_dlp
+    ydl_opts = {
+        'extract_flat': True,
+        'quiet': True,
+        'playlist_end': 20, # Get top 20 latest to keep context size manageable
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(body.channel_url, download=False)
+            entries = info.get('entries', [])
+            videos = []
+            for entry in entries:
+                if entry.get('id') and entry.get('title'):
+                    videos.append({
+                        "id": entry['id'],
+                        "title": entry['title'],
+                        "url": entry.get('url', f"https://www.youtube.com/watch?v={entry['id']}")
+                    })
+            save_youtube_videos(videos)
+            return {"status": "success", "message": f"Successfully synced {len(videos)} videos.", "videos": videos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
