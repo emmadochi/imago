@@ -18,6 +18,7 @@ DATA_DIR = Path("app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_FILE = DATA_DIR / "documents.json"
 YOUTUBE_CACHE_FILE = DATA_DIR / "youtube_cache.json"
+PODCAST_CACHE_FILE = DATA_DIR / "podcast_cache.json"
 
 def load_documents() -> list:
     if not DOCS_FILE.exists():
@@ -44,6 +45,19 @@ def load_youtube_videos() -> list:
 def save_youtube_videos(videos: list):
     with open(YOUTUBE_CACHE_FILE, "w") as f:
         json.dump(videos, f, indent=4)
+
+def load_podcasts() -> list:
+    if not PODCAST_CACHE_FILE.exists():
+        return []
+    try:
+        with open(PODCAST_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_podcasts(podcasts: list):
+    with open(PODCAST_CACHE_FILE, "w") as f:
+        json.dump(podcasts, f, indent=4)
 
 # Load environment
 load_dotenv()
@@ -277,6 +291,15 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
             yt_context += f"- Title: '{v['title']}' (ID: {v['id']})\n"
         yt_context += "\nIf the user's struggle perfectly matches a video topic, recommend it by appending exactly this markdown to your response: [YOUTUBE:id] (replace id with the video ID). Only recommend one video at most."
 
+    # Load Podcasts
+    podcasts = load_podcasts()
+    podcast_context = ""
+    if podcasts:
+        podcast_context = "\n\nAvailable Audio Podcast Sermons:\n"
+        for p in podcasts:
+            podcast_context += f"- Title: '{p['title']}' (URL: {p['url']})\n"
+        podcast_context += "\nIf the user's struggle perfectly matches an audio podcast topic, recommend it by appending exactly this markdown to your response: [AUDIO:url] (replace url with the exact URL). Only recommend one audio at most."
+
     # 4. Generate response using Gemini
     system_instruction = (
         "You are Imago, a highly interactive and compassionate virtual pastoral assistant for a Christian church. "
@@ -286,6 +309,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
         "Do not invent doctrines. "
         f"{mood_directive}"
         f"{yt_context}"
+        f"{podcast_context}"
     )
     
     # Build history for the Gemini contents list
@@ -733,6 +757,38 @@ async def sync_youtube_channel(body: YouTubeRequest):
                     })
             save_youtube_videos(videos)
             return {"status": "success", "message": f"Successfully synced {len(videos)} videos.", "videos": videos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class PodcastRequest(BaseModel):
+    rss_url: str
+
+@app.post("/api/admin/podcast")
+async def sync_podcast_feed(body: PodcastRequest):
+    import feedparser
+    try:
+        feed = feedparser.parse(body.rss_url)
+        if feed.bozo:
+            raise Exception("Invalid RSS feed")
+            
+        podcasts = []
+        for entry in feed.entries[:20]: # Get top 20 latest
+            audio_url = None
+            # Find the audio enclosure
+            for link in entry.get('links', []):
+                if link.get('type', '').startswith('audio/') or link.get('href', '').endswith('.mp3'):
+                    audio_url = link.get('href')
+                    break
+            
+            if audio_url and entry.get('title'):
+                podcasts.append({
+                    "id": audio_url, # using url as id for audio since it's direct
+                    "title": entry['title'],
+                    "url": audio_url
+                })
+                
+        save_podcasts(podcasts)
+        return {"status": "success", "message": f"Successfully synced {len(podcasts)} audio podcasts.", "podcasts": podcasts}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

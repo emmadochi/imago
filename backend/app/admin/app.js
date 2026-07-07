@@ -327,3 +327,48 @@ if (youtubeSyncBtn) {
     });
 }
 
+// ==========================================
+// Podcast Sync Logic
+// ==========================================
+const podcastUrlInput = document.getElementById('podcast-url');
+const podcastSyncBtn = document.getElementById('podcast-sync-btn');
+const podcastStatus = document.getElementById('podcast-status');
+
+if (podcastSyncBtn) {
+    podcastSyncBtn.addEventListener('click', async () => {
+        const url = podcastUrlInput.value.trim();
+        if (!url) {
+            podcastStatus.className = 'status-msg error';
+            podcastStatus.textContent = 'Please enter a valid Podcast RSS URL.';
+            return;
+        }
+
+        podcastStatus.className = 'status-msg loading';
+        podcastStatus.textContent = 'Syncing Podcast...';
+
+        try {
+            const response = await fetch('/api/admin/podcast', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rss_url: url })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                podcastStatus.className = 'status-msg success';
+                podcastStatus.textContent = data.message || 'Podcast synced successfully!';
+                podcastUrlInput.value = '';
+            } else {
+                podcastStatus.className = 'status-msg error';
+                podcastStatus.textContent = `Error: ${data.detail || 'Sync failed'}`;
+            }
+        } catch (error) {
+            podcastStatus.className = 'status-msg error';
+            podcastStatus.textContent = 'Network error occurred while syncing.';
+            console.error(error);
+        }
+    });
+}

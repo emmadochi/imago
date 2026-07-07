@@ -13,6 +13,7 @@ import '../theme/imago_theme.dart';
 import '../services/tracking_service.dart';
 import '../services/tts_service.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../widgets/audio_player_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -565,13 +566,21 @@ class _ChatScreenState extends State<ChatScreen>
         : Colors.white.withOpacity(0.12);
 
     String youtubeId = '';
+    String audioUrl = '';
     String displayText = text;
     if (!isUser) {
-      final regex = RegExp(r'\[YOUTUBE:(.+?)\]');
-      final match = regex.firstMatch(text);
-      if (match != null) {
-        youtubeId = match.group(1) ?? '';
-        displayText = text.replaceAll(match.group(0)!, '').trim();
+      final ytRegex = RegExp(r'\[YOUTUBE:(.+?)\]');
+      final ytMatch = ytRegex.firstMatch(displayText);
+      if (ytMatch != null) {
+        youtubeId = ytMatch.group(1) ?? '';
+        displayText = displayText.replaceAll(ytMatch.group(0)!, '').trim();
+      }
+
+      final audioRegex = RegExp(r'\[AUDIO:(.+?)\]');
+      final audioMatch = audioRegex.firstMatch(displayText);
+      if (audioMatch != null) {
+        audioUrl = audioMatch.group(1) ?? '';
+        displayText = displayText.replaceAll(audioMatch.group(0)!, '').trim();
       }
     }
 
@@ -632,6 +641,10 @@ class _ChatScreenState extends State<ChatScreen>
                         progressIndicatorColor: const Color(0xFF3D5AFE),
                       ),
                     ),
+                  ],
+                  if (audioUrl.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    AudioPlayerWidget(url: audioUrl),
                   ],
                   const SizedBox(height: 5),
                   Align(
