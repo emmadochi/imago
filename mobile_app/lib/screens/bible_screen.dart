@@ -1272,25 +1272,31 @@ final bgColor = _playingVerseNum == v.verse
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0E0B24),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Choose Translation',
-              style: TextStyle(
-                fontFamily: 'Cinzel',
-                color: ImagoColors.cream,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Choose Translation',
+                style: TextStyle(
+                  fontFamily: 'Cinzel',
+                  color: ImagoColors.cream,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ...kBibleTranslations.map((t) {
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: kBibleTranslations.map((t) {
               final isSelected = t.abbreviation == _translation;
               final isParallel = t.abbreviation == _parallelTranslation;
               return GestureDetector(
@@ -1369,9 +1375,12 @@ final bgColor = _playingVerseNum == v.verse
                   ),
                 ),
               );
-            }),
-            const SizedBox(height: 8),
-          ],
+            }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
