@@ -6,32 +6,81 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 // ── Palette (from INSPIRE.png) ─────────────────────────────
+enum AppThemeMode { violet, gold, azure }
+
+final ValueNotifier<AppThemeMode> appThemeNotifier = ValueNotifier(AppThemeMode.violet);
+
 class ImagoColors {
   ImagoColors._();
 
-  static const deepSpace   = Color(0xFF0B132B);
-  static const nebula      = Color(0xFF1B1147);
-  static const violet      = Color(0xFF3D5AFE);
-  static const gold        = Color(0xFFFFC857);
-  static const cream       = Color(0xFFFFF3D6);
+  static Color get deepSpace => appThemeNotifier.value == AppThemeMode.azure ? const Color(0xFF040A18) : const Color(0xFF0B132B);
+  
+  static Color get nebula {
+    switch (appThemeNotifier.value) {
+      case AppThemeMode.gold: return const Color(0xFF2A1F1D);
+      case AppThemeMode.azure: return const Color(0xFF0D1B2A);
+      default: return const Color(0xFF1B1147);
+    }
+  }
 
-  static const bgGradient  = LinearGradient(
-    begin: Alignment.topCenter,
-    end:   Alignment.bottomCenter,
-    colors: [Color(0xFF0B132B), Color(0xFF1B1147), Color(0xFF0B132B)],
-    stops:  [0.0, 0.55, 1.0],
-  );
+  static Color get violet {
+    switch (appThemeNotifier.value) {
+      case AppThemeMode.gold: return const Color(0xFFD4AF37);
+      case AppThemeMode.azure: return const Color(0xFF00B4D8);
+      default: return const Color(0xFF3D5AFE);
+    }
+  }
 
-  static const goldGradient = LinearGradient(
+  static Color get gold => appThemeNotifier.value == AppThemeMode.gold ? const Color(0xFFFFD700) : const Color(0xFFFFC857);
+  static Color get cream => appThemeNotifier.value == AppThemeMode.azure ? const Color(0xFFE0FBFC) : const Color(0xFFFFF3D6);
+
+  static LinearGradient get bgGradient {
+    switch (appThemeNotifier.value) {
+      case AppThemeMode.gold:
+        return const LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A1210), Color(0xFF2A1F1D), Color(0xFF1A1210)],
+          stops: [0.0, 0.55, 1.0],
+        );
+      case AppThemeMode.azure:
+        return const LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF040A18), Color(0xFF0D1B2A), Color(0xFF040A18)],
+          stops: [0.0, 0.55, 1.0],
+        );
+      default:
+        return const LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF0B132B), Color(0xFF1B1147), Color(0xFF0B132B)],
+          stops: [0.0, 0.55, 1.0],
+        );
+    }
+  }
+
+  static LinearGradient get goldGradient => LinearGradient(
     colors: [gold, cream, gold],
-    stops:  [0.0, 0.5, 1.0],
+    stops: const [0.0, 0.5, 1.0],
   );
 
-  static const violetGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end:   Alignment.bottomRight,
-    colors: [Color(0xFF5C6BC0), Color(0xFF3D5AFE)],
-  );
+  static LinearGradient get violetGradient {
+    switch (appThemeNotifier.value) {
+      case AppThemeMode.gold:
+        return const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFF1C40F), Color(0xFFD4AF37)],
+        );
+      case AppThemeMode.azure:
+        return const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF90E0EF), Color(0xFF00B4D8)],
+        );
+      default:
+        return const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF5C6BC0), Color(0xFF3D5AFE)],
+        );
+    }
+  }
 }
 
 // ── Text Styles ───────────────────────────────────────────
@@ -45,7 +94,7 @@ class ImagoText {
     fontWeight:  FontWeight.w700,
     letterSpacing: 8,
     foreground: Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         colors: [ImagoColors.gold, ImagoColors.cream, ImagoColors.gold],
         stops:  [0.0, 0.5, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size * 5, size)),
@@ -153,7 +202,7 @@ class CosmicBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(gradient: ImagoColors.bgGradient),
+      decoration: BoxDecoration(gradient: ImagoColors.bgGradient),
       child: Stack(children: children),
     );
   }

@@ -48,7 +48,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     });
 
     try {
-      await _audioPlayer.setSourceUrl(UrlSource(widget.url));
+      await _audioPlayer.setSourceUrl(widget.url);
     } catch (e) {
       debugPrint('Error loading audio: $e');
     }

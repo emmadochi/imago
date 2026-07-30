@@ -326,23 +326,25 @@ Play now
 
 This dramatically increases the value of the church's content archive.
 
-8. Bible Integration
+8. Bible & Dictionary Integration
 
-Instead of relying solely on Gemini.
+Instead of relying solely on Gemini, Imago will have a built-in Bible and Theological Dictionary. This feature will live in two places simultaneously:
 
-Include
+**A. The Dedicated Tab (The "Daily Bible" Experience)**
+*   Full offline Bible reading experience (via bundled SQLite database).
+*   Search Bible, Highlight verses, Parallel versions, Cross references.
+*   Original Greek/Hebrew references (Phase 2).
+*   This makes Imago a standalone daily Bible app, removing the need for users to switch to YouVersion.
 
-Search Bible
+**B. Deep Chat Integration (The "Study Companion" Experience)**
+*   **Inline Scripture Tooltips:** When Imago quotes a verse, it appears as a glowing, clickable chip. Tapping it opens a beautiful "glass" bottom sheet with the full context.
+*   **Contextual Search:** Ask Imago "What's that verse about eagle's wings?" and it generates a deep link directly to Isaiah 40 in the reader tab.
+*   **Split-Screen Mode:** Users can read the Bible on the top half of the screen and chat with Imago on the bottom half for real-time study assistance.
 
-Highlight verses
-
-Parallel versions
-
-Cross references
-
-Original Greek/Hebrew references (later)
-
-This becomes a daily Bible app.
+**C. The Biblical Dictionary**
+*   **Highlight to Define:** If a user encounters a heavy theological word (e.g., "propitiation", "sanctification") in the Bible tab or chat, they can long-press it.
+*   A tooltip pops up with the biblical definition (powered by public domain texts like Easton's Bible Dictionary).
+*   **AI Simplification:** Imago can automatically translate dense theological definitions into simple, everyday language.
 
 9. Prayer Mode
 

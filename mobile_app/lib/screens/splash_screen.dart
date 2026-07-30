@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
         Positioned(bottom: h * 0.08, right: -w * 0.25,
           child: const CosmicOrb(size: 300, color: Color(0xFF7C4DFF), opacity: 0.11)),
         Positioned(top: h * 0.35, left: w * 0.15,
-          child: const CosmicOrb(size: 180, color: ImagoColors.gold, opacity: 0.04)),
+          child: CosmicOrb(size: 180, color: ImagoColors.gold, opacity: 0.04)),
 
         // ── Floating small orbs (decorative) ──────────────
         ..._buildFloatingOrbs(w, h),
@@ -123,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
                       const SizedBox(height: 28),
 
                       // IMAGO wordmark
-                      Text('IMAGO', style: ImagoText.wordmark(size: 40)),
+                      Text('yo-ETS', style: ImagoText.wordmark(size: 40)),
 
                       const SizedBox(height: 10),
 

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'home_screen.dart';
 import 'chat_screen.dart';
 import 'bible_screen.dart';
@@ -26,15 +27,113 @@ class _MainShellState extends State<MainShell> {
     const ProfileScreen(),
   ];
 
+  Future<bool> _showExitDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0E0B24).withOpacity(0.95),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.white.withOpacity(0.12)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.power_settings_new_rounded, color: ImagoColors.gold, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                'Exit Imago?',
+                style: TextStyle(
+                  fontFamily: 'Cinzel',
+                  color: ImagoColors.cream,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to close the application?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 13.5,
+              height: 1.5,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ImagoColors.gold,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+              child: const Text(
+                'Exit',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF040510),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+          return;
+        }
+        final shouldExit = await _showExitDialog();
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: ValueListenableBuilder<AppThemeMode>(
+        valueListenable: appThemeNotifier,
+        builder: (context, theme, _) {
+          return Scaffold(
+            backgroundColor: ImagoColors.deepSpace,
+            body: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+            bottomNavigationBar: ValueListenableBuilder<bool>(
+              valueListenable: BibleScreen.distractionFreeNotifier,
+              builder: (context, isDistractionFree, child) {
+                if (isDistractionFree) return const SizedBox.shrink();
+                return _buildFloatingNav();
+              },
+            ),
+          );
+        },
       ),
-      bottomNavigationBar: _buildFloatingNav(),
     );
   }
 
@@ -42,14 +141,19 @@ class _MainShellState extends State<MainShell> {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: ImagoColors.nebula.withOpacity(0.75),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: ImagoColors.violet.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: Colors.black.withOpacity(0.4),
             blurRadius: 30,
             offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: ImagoColors.violet.withOpacity(0.1),
+            blurRadius: 15,
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -84,9 +188,12 @@ class _MainShellState extends State<MainShell> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF3D5AFE).withOpacity(0.15)
+              ? ImagoColors.violet.withOpacity(0.2)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? Border.all(color: ImagoColors.violet.withOpacity(0.4))
+              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -95,7 +202,7 @@ class _MainShellState extends State<MainShell> {
               icon,
               size: 22,
               color: isSelected
-                  ? const Color(0xFF5C6BC0)
+                  ? ImagoColors.gold
                   : Colors.white.withOpacity(0.4),
             ),
             const SizedBox(height: 4),
@@ -129,14 +236,10 @@ class _MainShellState extends State<MainShell> {
             height: 52,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF5C6BC0), Color(0xFF3D5AFE)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: ImagoColors.violetGradient,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3D5AFE).withOpacity(isSelected ? 0.7 : 0.4),
+                  color: ImagoColors.violet.withOpacity(isSelected ? 0.7 : 0.4),
                   blurRadius: isSelected ? 20 : 14,
                   spreadRadius: isSelected ? 2 : 1,
                 ),
@@ -146,7 +249,7 @@ class _MainShellState extends State<MainShell> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Imago',
+            'yo-ETS',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 10.5,

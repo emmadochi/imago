@@ -203,7 +203,7 @@ class _PrayerScreenState extends State<PrayerScreen>
           const SizedBox(height: 10),
 
           Text(
-            'Share what is on your heart.\nImago will lead you in prayer.',
+            'Share what is on your heart.\nyo-ETS will lead you in prayer.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
@@ -352,7 +352,7 @@ class _PrayerScreenState extends State<PrayerScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Imago is praying with you...',
+                        'yo-ETS is praying with you...',
                         style: TextStyle(
                             fontFamily: 'Poppins', color: Colors.white.withOpacity(0.45), fontSize: 14),
                       ),

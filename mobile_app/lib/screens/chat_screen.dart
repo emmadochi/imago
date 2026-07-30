@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/imago_theme.dart';
 import '../services/tracking_service.dart';
 import '../services/tts_service.dart';
+import '../services/bible_service.dart';
+import '../models/bible_models.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../widgets/audio_player_widget.dart';
 
@@ -425,8 +427,8 @@ class _ChatScreenState extends State<ChatScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Imago',
-                          style: const TextStyle(
+                      Text('yo-ETS',
+                          style: TextStyle(
                             fontFamily: 'Cinzel',
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -527,7 +529,7 @@ class _ChatScreenState extends State<ChatScreen>
                 border: Border.all(color: const Color(0xFF7986CB).withOpacity(0.35)),
               ),
               child: Text(r,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
                     color: ImagoColors.cream,
@@ -624,7 +626,12 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                     const SizedBox(height: 4),
                   ],
-                  SelectableText(displayText, style: ImagoText.body),
+                  SelectableText.rich(
+                    TextSpan(
+                      style: ImagoText.body,
+                      children: _parseTextWithVerses(displayText),
+                    ),
+                  ),
                   if (youtubeId.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     ClipRRect(
@@ -667,6 +674,143 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  // ── Verse Chip Parser ───────────────────────────────────
+  List<InlineSpan> _parseTextWithVerses(String text) {
+    // Matches references like "John 3:16", "1 Corinthians 13:4-8"
+    final regex = RegExp(r'\b((?:[1-3]\s+)?[A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?\b');
+    
+    final matches = regex.allMatches(text);
+    if (matches.isEmpty) {
+      return [TextSpan(text: text)];
+    }
+
+    final spans = <InlineSpan>[];
+    int currentIndex = 0;
+
+    for (final match in matches) {
+      final matchStr = match.group(0)!;
+      final bookStr = match.group(1)!;
+
+      final isValidBook = kBibleBooks.any((b) => b.name.toLowerCase() == bookStr.toLowerCase());
+
+      if (isValidBook) {
+        if (match.start > currentIndex) {
+          spans.add(TextSpan(text: text.substring(currentIndex, match.start)));
+        }
+
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: () => _showVerseContext(matchStr),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: ImagoColors.violetGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ImagoColors.violet.withOpacity(0.5),
+                      blurRadius: 8,
+                    )
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.menu_book_rounded, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      matchStr,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: text.substring(currentIndex, match.end)));
+      }
+      currentIndex = match.end;
+    }
+
+    if (currentIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(currentIndex)));
+    }
+
+    return spans;
+  }
+
+  Future<void> _showVerseContext(String reference) async {
+    final verses = await BibleService.instance.getVerseByReference(reference);
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0E0B24),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              reference,
+              style: TextStyle(
+                fontFamily: 'Cinzel',
+                color: ImagoColors.gold,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (verses.isNotEmpty)
+              ...verses.map((v) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      '${v.verse}. ${v.text}',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 15,
+                        height: 1.6,
+                      ),
+                    ),
+                  ))
+            else
+              Text(
+                "Could not load verse context for '$reference'.",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 15,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Sermon Card ─────────────────────────────────────────
   Widget _buildSermonCard(Map<String, dynamic> sermon) {
     final isPlaying = sermon['isPlaying'] ?? false;
@@ -680,7 +824,7 @@ class _ChatScreenState extends State<ChatScreen>
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: ImagoColors.gold.withOpacity(0.25)),
           boxShadow: [
-            BoxShadow(color: ImagoColors.gold.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 4)),
+            BoxShadow(color: ImagoColors.gold.withOpacity(0.06), blurRadius: 14, offset: Offset(0, 4)),
           ],
         ),
         child: ClipRRect(
@@ -697,7 +841,7 @@ class _ChatScreenState extends State<ChatScreen>
                       color: ImagoColors.gold.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.mic_rounded, color: ImagoColors.gold, size: 18),
+                    child: Icon(Icons.mic_rounded, color: ImagoColors.gold, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -757,7 +901,7 @@ class _ChatScreenState extends State<ChatScreen>
                             color: ImagoColors.gold, size: 14),
                         const SizedBox(width: 3),
                         Text(isPlaying ? 'PAUSE' : 'PLAY',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               color: ImagoColors.gold,
                               fontSize: 10,
@@ -880,16 +1024,16 @@ class _ChatScreenState extends State<ChatScreen>
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: ImagoColors.gold.withOpacity(0.2)),
           ),
-          title: const Text('About Imago',
+          title: Text('About yo-ETS',
               style: TextStyle(fontFamily: 'Cinzel', color: ImagoColors.cream, letterSpacing: 1)),
           content: Text(
-            'Imago is an AI Spiritual Counselor trained strictly on your pastor\'s sermons, teachings, and books.\n\nSelect an emotional check-in chip to receive personalised, scripture-grounded guidance.',
+            'yo-ETS is an AI Spiritual Counselor trained strictly on your pastor\'s sermons, teachings, and books.\n\nSelect an emotional check-in chip to receive personalised, scripture-grounded guidance.',
             style: TextStyle(fontFamily: 'Poppins', color: Colors.white.withOpacity(0.65), height: 1.5, fontSize: 13),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close',
+              child: Text('Close',
                   style: TextStyle(fontFamily: 'Poppins', color: ImagoColors.gold)),
             ),
           ],

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../theme/imago_theme.dart';
+import 'dictionary_screen.dart';
+import 'journal_list_screen.dart';
+import 'reading_plans_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final void Function(int index)? onNavigate;
@@ -90,7 +93,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           Text(
                             firstName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Cinzel',
                               color: ImagoColors.cream,
                               fontSize: 26,
@@ -112,7 +115,7 @@ class HomeScreen extends StatelessWidget {
                           backgroundColor: const Color(0xFF1B1147),
                           child: Text(
                             firstName.isNotEmpty ? firstName[0] : 'I',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Cinzel',
                               color: ImagoColors.gold,
                               fontWeight: FontWeight.bold,
@@ -141,7 +144,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Today's Word section
-                  const Text(
+                  Text(
                     "Today's Word",
                     style: TextStyle(
                       fontFamily: 'Cinzel',
@@ -168,7 +171,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 28),
 
                   // Quick access
-                  const Text(
+                  Text(
                     'Your Journey',
                     style: TextStyle(
                       fontFamily: 'Cinzel',
@@ -190,7 +193,7 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       _quickCard(
                         icon: Icons.auto_awesome_rounded,
-                        label: 'Ask Imago',
+                        label: 'Ask yo-ETS',
                         sublabel: 'AI Counseling',
                         gradient: const [Color(0xFF5C6BC0), Color(0xFF3D5AFE)],
                       ),
@@ -200,11 +203,17 @@ class HomeScreen extends StatelessWidget {
                         sublabel: 'Talk with God',
                         gradient: const [Color(0xFF4285F4), Color(0xFF1976D2)],
                       ),
-                      _quickCard(
-                        icon: Icons.mic_rounded,
-                        label: 'Sermons',
-                        sublabel: 'Audio archive',
-                        gradient: const [Color(0xFF9575CD), Color(0xFF673AB7)],
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const JournalListScreen()),
+                        ),
+                        child: _quickCard(
+                          icon: Icons.edit_note_rounded,
+                          label: 'Journal & Notes',
+                          sublabel: 'Your reflections',
+                          gradient: const [Color(0xFF9575CD), Color(0xFF673AB7)],
+                        ),
                       ),
                       GestureDetector(
                         onTap: () => onNavigate?.call(1),
@@ -213,6 +222,30 @@ class HomeScreen extends StatelessWidget {
                           label: 'Bible',
                           sublabel: 'Read the Word',
                           gradient: const [Color(0xFF4DB6AC), Color(0xFF009688)],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ReadingPlansScreen()),
+                        ),
+                        child: _quickCard(
+                          icon: Icons.track_changes_rounded,
+                          label: 'Reading Plans',
+                          sublabel: '30, 90 & 365 Days',
+                          gradient: const [Color(0xFFFF9800), Color(0xFFF57C00)],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DictionaryScreen()),
+                        ),
+                        child: _quickCard(
+                          icon: Icons.find_in_page_rounded,
+                          label: 'Dictionary',
+                          sublabel: 'Theological terms',
+                          gradient: const [Color(0xFFF06292), Color(0xFFE91E63)],
                         ),
                       ),
                     ],

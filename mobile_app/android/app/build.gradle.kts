@@ -21,6 +21,10 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    androidResources {
+        noCompress += listOf(".mybible")
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "org.lifechangerstouch.imago"

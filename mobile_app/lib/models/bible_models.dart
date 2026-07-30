@@ -117,7 +117,14 @@ const List<BibleBook> kBibleBooks = [
 
 // Available translations bundled with the app
 const List<BibleTranslation> kBibleTranslations = [
+  BibleTranslation(abbreviation: 'KJV+', description: "King James Version (Interlinear)", fileName: 'KJV+.bbl.mybible'),
   BibleTranslation(abbreviation: 'KJV', description: 'King James Version',    fileName: 'KJV.bbl.mybible'),
+  BibleTranslation(abbreviation: 'NIV', description: 'New International Version', fileName: 'NIV.bbl.mybible'),
+  BibleTranslation(abbreviation: 'MSG', description: 'The Message (MSG)',       fileName: 'MSG.bbl.mybible'),
   BibleTranslation(abbreviation: 'BBE', description: 'Bible in Basic English',   fileName: 'BBE.bbl.mybible'),
   BibleTranslation(abbreviation: 'BSB', description: 'Berean Standard Bible', fileName: 'BSB.bbl.mybible'),
+  BibleTranslation(abbreviation: 'TPT', description: 'The Passion Translation', fileName: 'TPT.bbl.mybible'),
+  BibleTranslation(abbreviation: 'AMP', description: 'Amplified Bible', fileName: 'AMP.bbl.mybible'),
+  BibleTranslation(abbreviation: 'ASV', description: 'American Standard Version', fileName: 'ASV.bbl.mybible'),
+  BibleTranslation(abbreviation: 'EASY', description: 'Easy English', fileName: 'EasyEnglish.bbl.mybible'),
 ];

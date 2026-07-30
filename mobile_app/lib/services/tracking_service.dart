@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class TrackingService {
   TrackingService._();
@@ -115,5 +116,20 @@ class TrackingService {
     }
 
     await prefs.setString(_kMoodHistory, jsonEncode(history));
+
+    // Fire-and-forget push to backend for anonymous analytics
+    try {
+      final url = Uri.parse('https://imago-nthk.onrender.com/api/analytics/mood');
+      http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'mood': moodName,
+          'intensity': intensity,
+        }),
+      );
+    } catch (e) {
+      // Silently fail if offline
+    }
   }
 }

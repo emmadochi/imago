@@ -18,15 +18,16 @@ class TtsService {
     // Attempt to set a high quality voice if available (iOS specific, or Google TTS on Android)
     // Fallback happens automatically
     
+    await _flutterTts.awaitSpeakCompletion(true);
+    
     _isInitialized = true;
   }
 
   Future<void> speak(String text) async {
     await _initTts();
-    await _flutterTts.stop(); // Stop any ongoing speech
     
-    // Clean up text (remove markdown asterisks, etc.)
-    final cleanText = text.replaceAll('*', '');
+    // Clean up text (remove markdown asterisks, curly braces, etc.)
+    final cleanText = text.replaceAll('*', '').replaceAll('{', '').replaceAll('}', '');
     await _flutterTts.speak(cleanText);
   }
 

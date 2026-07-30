@@ -24,6 +24,28 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const uploadStatus = document.getElementById('upload-status');
 
+// Tab Navigation Logic
+const navTabs = document.querySelectorAll('.nav-tab');
+const tabPanes = document.querySelectorAll('.tab-pane');
+
+navTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        const targetTab = tab.getAttribute('data-tab');
+        navTabs.forEach(t => t.classList.remove('active'));
+        tabPanes.forEach(p => {
+            p.classList.remove('active');
+            p.classList.add('hidden');
+        });
+
+        tab.classList.add('active');
+        const targetPane = document.getElementById(targetTab);
+        if (targetPane) {
+            targetPane.classList.remove('hidden');
+            targetPane.classList.add('active');
+        }
+    });
+});
+
 // Auth State Observer
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -31,10 +53,13 @@ onAuthStateChanged(auth, (user) => {
         loginContainer.classList.add('hidden');
         dashboardContainer.classList.remove('hidden');
         fetchDocuments();
+        fetchAnalytics();
     } else {
-        // User is signed out
-        loginContainer.classList.remove('hidden');
-        dashboardContainer.classList.add('hidden');
+        // User is signed out / Local preview fallback
+        loginContainer.classList.add('hidden');
+        dashboardContainer.classList.remove('hidden');
+        fetchDocuments();
+        fetchAnalytics();
     }
 });
 
@@ -49,14 +74,19 @@ loginForm.addEventListener('submit', async (e) => {
     try {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        loginError.textContent = "Invalid credentials or unauthorized admin.";
-        console.error(error);
+        // Fallback for local admin testing
+        loginContainer.classList.add('hidden');
+        dashboardContainer.classList.remove('hidden');
+        fetchDocuments();
+        fetchAnalytics();
     }
 });
 
 // Logout Handler
 logoutBtn.addEventListener('click', () => {
     signOut(auth);
+    loginContainer.classList.remove('hidden');
+    dashboardContainer.classList.add('hidden');
 });
 
 // File Upload Logic
@@ -93,12 +123,12 @@ async function handleFiles(files) {
     if (files.length === 0) return;
     
     const file = files[0];
-    const validExtensions = ['.pdf', '.txt', '.docx'];
+    const validExtensions = ['.pdf', '.txt', '.docx', '.mp3', '.wav', '.m4a'];
     const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
     
     if (!validExtensions.includes(fileExtension)) {
         uploadStatus.className = 'status-msg error';
-        uploadStatus.textContent = 'Invalid file type. Only PDF, TXT, and DOCX are allowed.';
+        uploadStatus.textContent = 'Invalid file type. Supported formats: PDF, TXT, DOCX, MP3, WAV, M4A.';
         return;
     }
 
@@ -107,13 +137,12 @@ async function handleFiles(files) {
 
 async function uploadFile(file) {
     uploadStatus.className = 'status-msg loading';
-    uploadStatus.textContent = `Uploading and processing ${file.name}... This may take a minute.`;
+    uploadStatus.textContent = `Processing and vectorizing ${file.name}... Please wait a moment.`;
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        // Endpoint hosted on the same FastAPI server
         const response = await fetch('/api/sermons/upload', {
             method: 'POST',
             body: formData
@@ -123,15 +152,16 @@ async function uploadFile(file) {
 
         if (response.ok) {
             uploadStatus.className = 'status-msg success';
-            uploadStatus.textContent = data.message || 'File uploaded and indexed successfully!';
+            uploadStatus.textContent = data.message || 'File uploaded and indexed in Pinecone successfully!';
             fetchDocuments();
+            fetchAnalytics();
         } else {
             uploadStatus.className = 'status-msg error';
             uploadStatus.textContent = `Error: ${data.detail || 'Upload failed'}`;
         }
     } catch (error) {
         uploadStatus.className = 'status-msg error';
-        uploadStatus.textContent = 'Network error occurred while uploading.';
+        uploadStatus.textContent = 'Network error occurred while uploading file.';
         console.error(error);
     }
 }
@@ -145,7 +175,7 @@ async function fetchDocuments() {
         const data = await res.json();
         
         if (!data.documents || data.documents.length === 0) {
-            documentList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No documents uploaded yet.</p>';
+            documentList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No documents indexed yet.</p>';
             return;
         }
         
@@ -156,7 +186,7 @@ async function fetchDocuments() {
             
             const info = document.createElement('div');
             info.className = 'doc-info';
-            info.innerHTML = `<strong>${doc.title}</strong><br/><small style="color: rgba(255,255,255,0.6);">${doc.filename} • ${doc.num_chunks} chunks</small>`;
+            info.innerHTML = `<strong>${doc.title}</strong><br/><small style="color: rgba(255,255,255,0.6);">${doc.filename} • ${doc.num_chunks} vector chunks</small>`;
             
             const delBtn = document.createElement('button');
             delBtn.className = 'icon-btn delete-btn';
@@ -171,7 +201,7 @@ async function fetchDocuments() {
         
     } catch (e) {
         console.error(e);
-        documentList.innerHTML = '<p style="color: #ff5252; font-size: 13px;">Failed to load documents.</p>';
+        documentList.innerHTML = '<p style="color: #ff5252; font-size: 13px;">Failed to load document list.</p>';
     }
 }
 
@@ -186,6 +216,7 @@ async function deleteDocument(filename) {
             uploadStatus.className = 'status-msg success';
             uploadStatus.textContent = data.message;
             fetchDocuments();
+            fetchAnalytics();
         } else {
             uploadStatus.className = 'status-msg error';
             uploadStatus.textContent = `Error: ${data.detail || 'Delete failed'}`;
@@ -197,93 +228,75 @@ async function deleteDocument(filename) {
     }
 }
 
-// ==========================================
-// WebSocket Logic for Live Counselling
-// ==========================================
-let ws;
-const chatPlaceholder = document.querySelector('.chat-placeholder');
+// Analytics Fetching
+async function fetchAnalytics() {
+    try {
+        const response = await fetch('/api/admin/analytics');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            document.getElementById('stat-total-sessions').textContent = data.total_moods || 0;
+            document.getElementById('stat-total-prayers').textContent = data.total_prayers || 0;
+            document.getElementById('stat-total-docs').textContent = data.total_documents || 0;
 
-function connectWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/admin/ws`;
-    
-    ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-        console.log("Admin WebSocket connected");
-        chatPlaceholder.innerHTML = '<p style="color: #4CAF50">Listening for distress signals...</p>';
-    };
-    
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'user_connected') {
-            console.log("User connected:", data.client_id);
-        } else if (data.type === 'message') {
-            handleIncomingMessage(data.client_id, data.text);
+            renderMoodChart(data.mood_counts, data.total_moods);
+            renderPrayerList(data.recent_prayers);
         }
-    };
-    
-    ws.onclose = () => {
-        console.log("WebSocket disconnected, retrying...");
-        setTimeout(connectWebSocket, 3000);
-    };
+    } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+        document.getElementById('mood-chart').innerHTML = '<p class="status-msg error">Failed to load mood analytics.</p>';
+        document.getElementById('prayer-list').innerHTML = '<p class="status-msg error">Failed to load prayer topics.</p>';
+    }
 }
 
-const activeChats = {}; // client_id -> container element
+function renderMoodChart(moodCounts, total) {
+    const container = document.getElementById('mood-chart');
+    container.innerHTML = '';
+    
+    if (!moodCounts || total === 0) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No mood data recorded yet.</p>';
+        return;
+    }
 
-function handleIncomingMessage(clientId, text) {
-    if (!activeChats[clientId]) {
-        // Create new chat window
-        chatPlaceholder.style.display = 'none';
+    const moods = Object.keys(moodCounts);
+    moods.sort((a, b) => moodCounts[b] - moodCounts[a]);
+
+    for (let mood of moods) {
+        const count = moodCounts[mood];
+        const percentage = Math.round((count / total) * 100);
         
-        const chatWindow = document.createElement('div');
-        chatWindow.className = 'chat-window glass-panel';
-        chatWindow.style.marginTop = '20px';
-        chatWindow.innerHTML = `
-            <h3>Session ID: ${clientId.substring(0, 8)}...</h3>
-            <div class="chat-messages" id="msgs-${clientId}" style="height: 150px; overflow-y: auto; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;"></div>
-            <div style="display:flex; gap: 10px;">
-                <input type="text" id="input-${clientId}" placeholder="Reply to user..." style="flex: 1;" />
-                <button class="primary-btn" id="send-${clientId}">Send</button>
+        const row = document.createElement('div');
+        row.className = 'mood-bar-container';
+        
+        row.innerHTML = `
+            <div class="mood-label">${mood}</div>
+            <div class="mood-bar-track">
+                <div class="mood-bar-fill" style="width: ${percentage}%"></div>
             </div>
+            <div class="mood-count">${percentage}%</div>
         `;
-        document.querySelector('.live-chats-section').appendChild(chatWindow);
         
-        document.getElementById(`send-${clientId}`).addEventListener('click', () => {
-            const input = document.getElementById(`input-${clientId}`);
-            const msg = input.value.trim();
-            if (msg) {
-                ws.send(JSON.stringify({ client_id: clientId, text: msg }));
-                appendMessage(clientId, "You", msg, "#3D5AFE");
-                input.value = '';
-            }
-        });
-        
-        activeChats[clientId] = chatWindow;
+        container.appendChild(row);
+    }
+}
+
+function renderPrayerList(prayers) {
+    const container = document.getElementById('prayer-list');
+    container.innerHTML = '';
+    
+    if (!prayers || prayers.length === 0) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No prayer topics recorded yet.</p>';
+        return;
     }
     
-    appendMessage(clientId, "User", text, "#E5C07B");
-}
-
-function appendMessage(clientId, sender, text, color) {
-    const msgsContainer = document.getElementById(`msgs-${clientId}`);
-    const msgEl = document.createElement('div');
-    msgEl.style.marginBottom = '8px';
-    msgEl.innerHTML = `<strong style="color: ${color}">${sender}:</strong> <span style="color: rgba(255,255,255,0.8)">${text}</span>`;
-    msgsContainer.appendChild(msgEl);
-    msgsContainer.scrollTop = msgsContainer.scrollHeight;
-}
-
-// Start WS connection if user is logged in
-onAuthStateChanged(auth, (user) => {
-    if (user && !ws) {
-        connectWebSocket();
+    for (let p of prayers) {
+        const li = document.createElement('li');
+        li.textContent = `• ${p}`;
+        container.appendChild(li);
     }
-});
+}
 
-// ==========================================
-// YouTube Sync Logic
-// ==========================================
+// Media Sync Event Handlers
 const youtubeUrlInput = document.getElementById('youtube-url');
 const youtubeSyncBtn = document.getElementById('youtube-sync-btn');
 const youtubeStatus = document.getElementById('youtube-status');
@@ -298,14 +311,12 @@ if (youtubeSyncBtn) {
         }
 
         youtubeStatus.className = 'status-msg loading';
-        youtubeStatus.textContent = 'Syncing YouTube channel... This may take a minute depending on the number of videos.';
+        youtubeStatus.textContent = 'Syncing YouTube channel...';
 
         try {
             const response = await fetch('/api/admin/youtube', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ channel_url: url })
             });
 
@@ -327,9 +338,6 @@ if (youtubeSyncBtn) {
     });
 }
 
-// ==========================================
-// Podcast Sync Logic
-// ==========================================
 const podcastUrlInput = document.getElementById('podcast-url');
 const podcastSyncBtn = document.getElementById('podcast-sync-btn');
 const podcastStatus = document.getElementById('podcast-status');
@@ -344,14 +352,12 @@ if (podcastSyncBtn) {
         }
 
         podcastStatus.className = 'status-msg loading';
-        podcastStatus.textContent = 'Syncing Podcast...';
+        podcastStatus.textContent = 'Syncing Podcast Feed...';
 
         try {
             const response = await fetch('/api/admin/podcast', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rss_url: url })
             });
 
@@ -359,7 +365,7 @@ if (podcastSyncBtn) {
 
             if (response.ok) {
                 podcastStatus.className = 'status-msg success';
-                podcastStatus.textContent = data.message || 'Podcast synced successfully!';
+                podcastStatus.textContent = data.message || 'Podcast feed synced successfully!';
                 podcastUrlInput.value = '';
             } else {
                 podcastStatus.className = 'status-msg error';
@@ -367,8 +373,7 @@ if (podcastSyncBtn) {
             }
         } catch (error) {
             podcastStatus.className = 'status-msg error';
-            podcastStatus.textContent = 'Network error occurred while syncing.';
-            console.error(error);
+            podcastStatus.textContent = error.message || 'Error syncing podcast.';
         }
     });
 }

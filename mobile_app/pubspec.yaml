@@ -1,5 +1,5 @@
 name: imago
-description: Imago — The Church's Intelligent Digital Ministry Platform
+description: yo-ETS — The Church's Intelligent Digital Ministry Platform
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,8 +11,8 @@ dependencies:
     sdk: flutter
   google_fonts: ^6.1.0
   http: ^1.2.0
-  intl: ^0.19.0
-  shared_preferences: ^2.2.3
+  intl: any
+  shared_preferences: any
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.0
   cloud_firestore: ^5.4.0
@@ -27,6 +27,12 @@ dependencies:
   flutter_tts: ^4.2.5
   youtube_player_flutter: ^9.0.1
   audioplayers: ^6.1.0
+  flutter_quill: ^11.5.0
+  flutter_colorpicker: any
+  photo_view: any
+  tuple: ^2.0.2
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -69,3 +75,6 @@ flutter_native_splash:
     image: "assets/images/logo.png"
     icon_background_color: "#FFFFFF"
     color: "#FFFFFF"
+
+dependency_overrides:
+  flutter_keyboard_visibility: ^6.0.0

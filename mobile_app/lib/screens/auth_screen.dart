@@ -156,7 +156,7 @@ class _AuthScreenState extends State<AuthScreen>
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                child: const SizedBox.shrink(),
+                child: SizedBox.shrink(),
               ),
             ),
           ),
@@ -172,7 +172,7 @@ class _AuthScreenState extends State<AuthScreen>
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-                child: const SizedBox.shrink(),
+                child: SizedBox.shrink(),
               ),
             ),
           ),
@@ -182,7 +182,7 @@ class _AuthScreenState extends State<AuthScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Column(
                 children: [
-                  const SizedBox(height: 30),
+                  SizedBox(height: 30),
 
                   // Levitating logo
                   AnimatedBuilder(
@@ -207,16 +207,16 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.church_rounded,
+                      child: Icon(Icons.church_rounded,
                           color: Colors.white, size: 32),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   Text(
                     _isLogin ? 'Welcome Back' : 'Create Account',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Cinzel',
                       color: Colors.white,
                       fontSize: 28,
@@ -224,12 +224,12 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
 
                   Text(
                     _isLogin
                         ? 'Continue your spiritual journey'
-                        : 'Begin your journey with Imago',
+                        : 'Begin your journey with yo-ETS',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       color: Colors.white.withOpacity(0.45),
@@ -237,7 +237,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
 
                   // ── Google Sign-In Button ──
                   GestureDetector(
@@ -256,7 +256,7 @@ class _AuthScreenState extends State<AuthScreen>
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: _isGoogleLoading
-                              ? const Center(
+                              ? Center(
                                   child: SizedBox(
                                     width: 20,
                                     height: 20,
@@ -271,8 +271,8 @@ class _AuthScreenState extends State<AuthScreen>
                                   children: [
                                     // Google G logo built from colored blocks
                                     _GoogleIcon(),
-                                    const SizedBox(width: 10),
-                                    const Text(
+                                    SizedBox(width: 10),
+                                    Text(
                                       'Continue with Google',
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
@@ -288,7 +288,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
 
                   // ── Divider ──
                   Row(
@@ -311,7 +311,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
 
                   // ── Email / Password form ──
                   Container(
@@ -348,7 +348,7 @@ class _AuthScreenState extends State<AuthScreen>
                                             ? 'Please enter your name'
                                             : null,
                                   ),
-                                  const SizedBox(height: 14),
+                                  SizedBox(height: 14),
                                 ],
 
                                 _buildField(
@@ -362,7 +362,7 @@ class _AuthScreenState extends State<AuthScreen>
                                           : null,
                                 ),
 
-                                const SizedBox(height: 14),
+                                SizedBox(height: 14),
 
                                 _buildField(
                                   controller: _passwordController,
@@ -387,7 +387,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                                 // Error banner
                                 if (_errorMessage != null) ...[
-                                  const SizedBox(height: 14),
+                                  SizedBox(height: 14),
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
@@ -400,13 +400,13 @@ class _AuthScreenState extends State<AuthScreen>
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.warning_amber_rounded,
+                                        Icon(Icons.warning_amber_rounded,
                                             color: Colors.redAccent, size: 18),
-                                        const SizedBox(width: 8),
+                                        SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             _errorMessage!,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'Poppins',
                                               color: Colors.redAccent,
                                               fontSize: 12.5,
@@ -418,7 +418,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   ),
                                 ],
 
-                                const SizedBox(height: 24),
+                                SizedBox(height: 24),
 
                                 // Submit button
                                 GestureDetector(
@@ -447,7 +447,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     ),
                                     child: Center(
                                       child: _isLoading
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               width: 20,
                                               height: 20,
                                               child: CircularProgressIndicator(
@@ -459,7 +459,7 @@ class _AuthScreenState extends State<AuthScreen>
                                               _isLogin
                                                   ? 'Sign In'
                                                   : 'Create Account',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontFamily: 'Poppins',
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
@@ -477,7 +477,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Toggle login/register
                   GestureDetector(
@@ -500,7 +500,7 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                           TextSpan(
                             text: _isLogin ? 'Register' : 'Sign In',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: ImagoColors.gold,
                               fontWeight: FontWeight.bold,
                             ),
@@ -510,7 +510,7 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
                   // SHA-1 reminder (dev only note)
                   Container(
@@ -524,9 +524,9 @@ class _AuthScreenState extends State<AuthScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.info_outline_rounded,
+                        Icon(Icons.info_outline_rounded,
                             color: Colors.amber, size: 16),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'For Google Sign-In on a physical device, add your SHA-1 fingerprint in Firebase Console → Project Settings → Your Android app.',
@@ -563,7 +563,7 @@ class _AuthScreenState extends State<AuthScreen>
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 15),
+      style: TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 15),
       validator: validator,
       decoration: InputDecoration(
         hintText: hint,
@@ -593,7 +593,7 @@ class _AuthScreenState extends State<AuthScreen>
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
         ),
-        errorStyle: const TextStyle(fontFamily: 'Poppins', color: Colors.redAccent, fontSize: 11.5),
+        errorStyle: TextStyle(fontFamily: 'Poppins', color: Colors.redAccent, fontSize: 11.5),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),

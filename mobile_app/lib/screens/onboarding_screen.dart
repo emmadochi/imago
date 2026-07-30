@@ -22,7 +22,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'glowColor': const Color(0xFF6B4EFF),
       'title': 'Discover the\nGod in You',
       'body':
-          'Imago is more than an AI. It is your pastor\'s teachings, wisdom, and counseling available to you 24 hours a day — wherever life takes you.',
+          'yo-ETS is more than an AI. It is your pastor\'s teachings, wisdom, and counseling available to you 24 hours a day — wherever life takes you.',
     },
     {
       'icon': Icons.church_rounded,
@@ -38,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'glowColor': const Color(0xFFB78AFF),
       'title': 'Counseling.\nPrayer. Growth.',
       'body':
-          'Talk to Imago about life\'s struggles, join a prayer session, track your spiritual growth, and explore your pastor\'s sermon archive.',
+          'Talk to yo-ETS about life\'s struggles, join a prayer session, track your spiritual growth, and explore your pastor\'s sermon archive.',
     },
   ];
 
