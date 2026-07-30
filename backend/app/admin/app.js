@@ -122,23 +122,47 @@ fileInput.addEventListener('change', function() {
 async function handleFiles(files) {
     if (files.length === 0) return;
     
-    const file = files[0];
     const validExtensions = ['.pdf', '.txt', '.docx', '.mp3', '.wav', '.m4a'];
-    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    let successCount = 0;
+    let failCount = 0;
     
-    if (!validExtensions.includes(fileExtension)) {
-        uploadStatus.className = 'status-msg error';
-        uploadStatus.textContent = 'Invalid file type. Supported formats: PDF, TXT, DOCX, MP3, WAV, M4A.';
-        return;
-    }
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        
+        if (!validExtensions.includes(fileExtension)) {
+            console.error(`Invalid file type: ${file.name}`);
+            failCount++;
+            continue;
+        }
 
-    await uploadFile(file);
+        uploadStatus.className = 'status-msg loading';
+        uploadStatus.textContent = `Processing file ${i + 1} of ${files.length}: ${file.name}...`;
+
+        const success = await uploadFile(file);
+        if (success) {
+            successCount++;
+        } else {
+            failCount++;
+        }
+    }
+    
+    if (successCount > 0 && failCount === 0) {
+        uploadStatus.className = 'status-msg success';
+        uploadStatus.textContent = `All ${successCount} files uploaded successfully!`;
+    } else if (successCount > 0 && failCount > 0) {
+        uploadStatus.className = 'status-msg warning';
+        uploadStatus.textContent = `Completed! ${successCount} succeeded, ${failCount} failed.`;
+    } else {
+        uploadStatus.className = 'status-msg error';
+        uploadStatus.textContent = `Failed to upload any of the ${failCount} files.`;
+    }
+    
+    fetchDocuments();
+    fetchAnalytics();
 }
 
 async function uploadFile(file) {
-    uploadStatus.className = 'status-msg loading';
-    uploadStatus.textContent = `Processing and vectorizing ${file.name}... Please wait a moment.`;
-
     const formData = new FormData();
     formData.append('file', file);
 
@@ -147,22 +171,11 @@ async function uploadFile(file) {
             method: 'POST',
             body: formData
         });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            uploadStatus.className = 'status-msg success';
-            uploadStatus.textContent = data.message || 'File uploaded and indexed in Pinecone successfully!';
-            fetchDocuments();
-            fetchAnalytics();
-        } else {
-            uploadStatus.className = 'status-msg error';
-            uploadStatus.textContent = `Error: ${data.detail || 'Upload failed'}`;
-        }
+        
+        return response.ok;
     } catch (error) {
-        uploadStatus.className = 'status-msg error';
-        uploadStatus.textContent = 'Network error occurred while uploading file.';
         console.error(error);
+        return false;
     }
 }
 
