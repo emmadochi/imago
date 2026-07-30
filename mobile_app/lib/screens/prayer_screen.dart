@@ -25,7 +25,7 @@ class _PrayerScreenState extends State<PrayerScreen>
   bool _isLoading = false;
   bool _prayerStarted = false;
 
-  final String _backendUrl = "http://10.0.2.2:8000";
+  final String _backendUrl = "https://imago-1-wkzl.onrender.com";
 
   @override
   void initState() {
@@ -74,7 +74,7 @@ class _PrayerScreenState extends State<PrayerScreen>
         Uri.parse('$_backendUrl/api/prayer'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'request': request}),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 90));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

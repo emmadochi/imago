@@ -66,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen>
   late final AudioRecorder _audioRecorder;
 
   // Using Render for production!
-  final String _backendUrl = 'https://imago-nthk.onrender.com';
+  final String _backendUrl = 'https://imago-1-wkzl.onrender.com';
 
   @override
   void initState() {
@@ -222,7 +222,7 @@ class _ChatScreenState extends State<ChatScreen>
           'mood': _selectedMood,
           'history': _buildHistoryPayload()
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 90));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
