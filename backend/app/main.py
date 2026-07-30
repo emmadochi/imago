@@ -21,7 +21,11 @@ try:
     if not firebase_admin._apps:
         # Initialize Firebase Admin app
         cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
-        if cred_path and os.path.exists(cred_path):
+        cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+        if cred_json:
+            cred = credentials.Certificate(json.loads(cred_json))
+            firebase_admin.initialize_app(cred)
+        elif cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
         else:
