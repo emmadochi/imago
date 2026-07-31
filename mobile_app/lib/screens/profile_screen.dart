@@ -2,10 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'auth_screen.dart';
+import 'login_screen.dart';
 import 'saved_verses_screen.dart';
+import 'main_shell.dart';
 import '../services/user_data_service.dart';
 import '../services/tracking_service.dart';
+import '../services/auth_service.dart';
 import '../theme/imago_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -46,12 +48,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('has_onboarded');
+    await AuthService.instance.signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(
+          onContinue: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MainShell()),
+              (route) => false,
+            );
+          },
+        ),
+      ),
       (route) => false,
     );
   }

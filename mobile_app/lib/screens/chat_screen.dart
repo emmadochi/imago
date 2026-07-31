@@ -67,7 +67,8 @@ class _ChatScreenState extends State<ChatScreen>
 
   // Using Render for production!
   final String _backendUrl = 'https://imago-1-wkzl.onrender.com';
-
+  bool _autoReadEnabled = false;
+  
   @override
   void initState() {
     super.initState();
@@ -90,6 +91,9 @@ class _ChatScreenState extends State<ChatScreen>
 
   Future<void> _loadChats() async {
     _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoReadEnabled = _prefs?.getBool('auto_read_enabled') ?? false;
+    });
     final String? chatsJson = _prefs!.getString('chat_history');
     if (chatsJson != null) {
       final List<dynamic> decoded = jsonDecode(chatsJson);
@@ -174,6 +178,9 @@ class _ChatScreenState extends State<ChatScreen>
           _saveChats();
         });
         _scrollToBottom();
+        if (_autoReadEnabled) {
+          TtsService.instance.speak(data['text']);
+        }
       }
     });
   }
@@ -268,6 +275,9 @@ class _ChatScreenState extends State<ChatScreen>
       _saveChats();
     });
     _scrollToBottom();
+    if (_autoReadEnabled) {
+      TtsService.instance.speak(responseText);
+    }
   }
 
   Future<void> _startRecording() async {
@@ -446,6 +456,26 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 ),
                 IconButton(
+                  icon: Icon(
+                    _autoReadEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    color: _autoReadEnabled ? const Color(0xFF3D5AFE) : Colors.white.withOpacity(0.5),
+                    size: 20,
+                  ),
+                  tooltip: _autoReadEnabled ? 'Voice Mode: On' : 'Voice Mode: Off',
+                  onPressed: () {
+                    setState(() => _autoReadEnabled = !_autoReadEnabled);
+                    if (_prefs != null) {
+                      _prefs!.setBool('auto_read_enabled', _autoReadEnabled);
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_autoReadEnabled ? 'Voice Mode Enabled (Responses will be read aloud)' : 'Voice Mode Disabled'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
                   icon: Icon(Icons.delete_outline_rounded, color: Colors.white.withOpacity(0.5), size: 20),
                   onPressed: _resetChat,
                 ),
@@ -620,7 +650,7 @@ class _ChatScreenState extends State<ChatScreen>
                     Align(
                       alignment: Alignment.topRight,
                       child: GestureDetector(
-                        onTap: () => TtsService.instance.speak(displayText),
+                        onTap: () => TtsService.instance.toggleSpeak(displayText),
                         child: Icon(Icons.volume_up_rounded, color: Colors.white.withOpacity(0.6), size: 18),
                       ),
                     ),
