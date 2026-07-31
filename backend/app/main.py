@@ -849,14 +849,20 @@ class YouTubeRequest(BaseModel):
 @app.post("/api/admin/youtube")
 async def sync_youtube_channel(body: YouTubeRequest):
     import yt_dlp
+    
+    url = body.channel_url
+    # Force /videos tab for channel URLs to prevent downloading nested playlists
+    if "@" in url and not url.endswith("/videos") and not url.endswith("/shorts") and not url.endswith("/streams"):
+        url = url.rstrip("/") + "/videos"
+        
     ydl_opts = {
-        'extract_flat': True,
+        'extract_flat': 'in_playlist',
         'quiet': True,
-        'playlist_end': 20, # Get top 20 latest to keep context size manageable
+        'playlist_items': '1-20', # Get top 20 latest to keep context size manageable
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(body.channel_url, download=False)
+            info = ydl.extract_info(url, download=False)
             entries = info.get('entries', [])
             videos = []
             for entry in entries:
