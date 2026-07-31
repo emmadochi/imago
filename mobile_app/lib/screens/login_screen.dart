@@ -46,8 +46,28 @@ class _LoginScreenState extends State<LoginScreen> {
         await AuthService.instance.signInWithEmailAndPassword(email, password);
       }
       widget.onContinue();
+    } on FirebaseAuthException catch (e) {
+      String msg = e.message ?? e.code;
+      if (e.code == 'user-not-found') {
+        msg = 'No account found with this email. Please click "Create Account".';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        msg = 'Incorrect email or password. Please check your credentials or click "Create Account".';
+      } else if (e.code == 'email-already-in-use') {
+        msg = 'An account already exists with this email. Please click "Sign In".';
+      } else if (e.code == 'operation-not-allowed') {
+        msg = 'Email/Password sign-in is disabled in Firebase Console.';
+      } else if (e.code == 'invalid-email') {
+        msg = 'Please enter a valid email address.';
+      } else if (e.code == 'weak-password') {
+        msg = 'Password should be at least 6 characters.';
+      }
+      setState(() => _errorMessage = msg);
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim());
+      String errStr = e.toString();
+      if (errStr.contains('Null check operator')) {
+        errStr = 'Account not found or invalid credentials. If you don\'t have an account, click "Create Account".';
+      }
+      setState(() => _errorMessage = errStr.replaceAll('Exception:', '').trim());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -65,7 +85,13 @@ class _LoginScreenState extends State<LoginScreen> {
         widget.onContinue();
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Google Sign-In failed. Please try again.');
+      String errStr = e.toString();
+      if (errStr.contains('10') || errStr.contains('ApiException')) {
+        errStr = 'Google Sign-In requires SHA-1 fingerprint added in Firebase Console.';
+      } else {
+        errStr = 'Google Sign-In failed. Please try again or use Email sign in.';
+      }
+      setState(() => _errorMessage = errStr);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
