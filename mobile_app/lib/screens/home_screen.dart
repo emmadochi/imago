@@ -504,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     childAspectRatio: 1.4,
                     children: [
                       GestureDetector(
-                        onTap: () => widget.onNavigate?.call(0),
+                        onTap: () => widget.onNavigate?.call(2),
                         child: _quickCard(
                           icon: Icons.auto_awesome_rounded,
                           label: 'Ask yo-ETS',
@@ -513,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => widget.onNavigate?.call(2),
+                        onTap: () => widget.onNavigate?.call(3),
                         child: _quickCard(
                           icon: Icons.volunteer_activism_rounded,
                           label: 'Prayer Mode',
