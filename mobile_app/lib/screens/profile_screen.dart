@@ -598,28 +598,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 28),
 
-                  // Sign out
+                  // Sign out / Sign in button
                   GestureDetector(
-                    onTap: () => _signOut(context),
+                    onTap: () {
+                      if (user != null) {
+                        _signOut(context);
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => LoginScreen(
+                              onContinue: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                        );
+                      }
+                    },
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent.withOpacity(0.08),
+                        color: (user != null ? Colors.redAccent : const Color(0xFF3D5AFE)).withOpacity(0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: Colors.redAccent.withOpacity(0.2)),
+                            color: user != null ? Colors.redAccent.withOpacity(0.3) : const Color(0xFF3D5AFE).withOpacity(0.4)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.logout_rounded,
-                              color: Colors.redAccent, size: 18),
-                          SizedBox(width: 8),
+                          Icon(
+                            user != null ? Icons.logout_rounded : Icons.login_rounded,
+                            color: user != null ? Colors.redAccent : const Color(0xFF3D5AFE),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            'Sign Out',
+                            user != null ? 'Sign Out' : 'Sign In / Create Account',
                             style: TextStyle(
-                              color: Colors.redAccent,
+                              color: user != null ? Colors.redAccent : const Color(0xFF3D5AFE),
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
