@@ -42,6 +42,36 @@ DOCS_FILE = DATA_DIR / "documents.json"
 YOUTUBE_CACHE_FILE = DATA_DIR / "youtube_cache.json"
 PODCAST_CACHE_FILE = DATA_DIR / "podcast_cache.json"
 ANALYTICS_FILE = DATA_DIR / "analytics.json"
+COMMUNITY_PRAYERS_FILE = DATA_DIR / "community_prayers.json"
+
+def load_community_prayers() -> list:
+    if firestore_db:
+        try:
+            doc = firestore_db.collection("imago_meta").document("community_prayers").get()
+            if doc.exists:
+                data = doc.to_dict()
+                return data.get("list", [])
+        except Exception as e:
+            print(f"Warning: Firestore load community prayers error: {e}")
+    if not COMMUNITY_PRAYERS_FILE.exists():
+        return []
+    try:
+        with open(COMMUNITY_PRAYERS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_community_prayers(prayers: list):
+    if firestore_db:
+        try:
+            firestore_db.collection("imago_meta").document("community_prayers").set({"list": prayers}, merge=True)
+        except Exception as e:
+            print(f"Warning: Firestore save community prayers error: {e}")
+    try:
+        with open(COMMUNITY_PRAYERS_FILE, "w") as f:
+            json.dump(prayers, f, indent=4)
+    except Exception:
+        pass
 
 def load_analytics() -> dict:
     if firestore_db:
@@ -841,6 +871,61 @@ async def prayer_endpoint(body: PrayerRequest):
             "In Jesus' Name, Amen. 🙏"
         )
         return PrayerResponse(prayer=fallback_prayer)
+
+
+class CommunityPrayerRequest(BaseModel):
+    request: str
+    is_anonymous: bool = True
+    author_name: Optional[str] = "Anonymous"
+    uid: Optional[str] = None
+
+@app.post("/api/community-prayer")
+async def post_community_prayer(body: CommunityPrayerRequest):
+    import uuid
+    prayers = load_community_prayers()
+    item_id = str(uuid.uuid4())[:8]
+    item = {
+        "id": item_id,
+        "request": body.request,
+        "is_anonymous": body.is_anonymous,
+        "author_name": "Anonymous" if body.is_anonymous else (body.author_name or "Believer"),
+        "uid": None if body.is_anonymous else body.uid,
+        "prayed_count": 0,
+        "created_at": datetime.datetime.now().isoformat()
+    }
+    prayers.insert(0, item)
+    save_community_prayers(prayers)
+    
+    analytics = load_analytics()
+    analytics.setdefault("prayers", []).append({
+        "topic": body.request,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
+    save_analytics(analytics)
+    
+    return {"status": "success", "prayer": item}
+
+@app.get("/api/community-prayer")
+async def get_community_prayers(limit: int = 50):
+    prayers = load_community_prayers()
+    return {"prayers": prayers[:limit]}
+
+@app.post("/api/community-prayer/{prayer_id}/pray")
+async def pray_for_community_item(prayer_id: str):
+    prayers = load_community_prayers()
+    found = False
+    new_count = 0
+    for p in prayers:
+        if p.get("id") == prayer_id:
+            p["prayed_count"] = p.get("prayed_count", 0) + 1
+            new_count = p["prayed_count"]
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Prayer request not found")
+    save_community_prayers(prayers)
+    return {"status": "success", "id": prayer_id, "prayed_count": new_count}
+
 
 
 class YouTubeRequest(BaseModel):
