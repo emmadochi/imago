@@ -927,6 +927,124 @@ async def pray_for_community_item(prayer_id: str):
     return {"status": "success", "id": prayer_id, "prayed_count": new_count}
 
 
+DEVOTIONAL_CACHE_FILE = DATA_DIR / "devotional_cache.json"
+
+DAILY_VERSES = [
+    {
+        "verse": "Jeremiah 29:11",
+        "text": "\"For I know the plans I have for you,\" declares the Lord, \"plans to prosper you and not to harm you, plans to give you hope and a future.\"",
+        "theme": "Purpose & Hope"
+    },
+    {
+        "verse": "Philippians 4:6-7",
+        "text": "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.",
+        "theme": "Unshakable Peace"
+    },
+    {
+        "verse": "Isaiah 41:10",
+        "text": "Fear not, for I am with you; be not dismayed, for I am your God. I will strengthen you, yes, I will help you, I will uphold you with My righteous right hand.",
+        "theme": "Divine Strength"
+    },
+    {
+        "verse": "Proverbs 3:5-6",
+        "text": "Trust in the Lord with all your heart, and lean not on your own understanding; in all your ways acknowledge Him, and He shall direct your paths.",
+        "theme": "Trust & Direction"
+    },
+    {
+        "verse": "Romans 8:28",
+        "text": "And we know that all things work together for good to those who love God, to those who are the called according to His purpose.",
+        "theme": "Providence & Grace"
+    },
+    {
+        "verse": "Psalm 46:10",
+        "text": "Be still, and know that I am God; I will be exalted among the nations, I will be exalted in the earth!",
+        "theme": "Stillness & Faith"
+    },
+    {
+        "verse": "2 Corinthians 12:9",
+        "text": "My grace is sufficient for you, for My strength is made perfect in weakness.",
+        "theme": "Sufficient Grace"
+    }
+]
+
+def load_devotional_cache() -> dict:
+    if firestore_db:
+        try:
+            doc = firestore_db.collection("imago_meta").document("devotional_cache").get()
+            if doc.exists:
+                return doc.to_dict()
+        except Exception as e:
+            print(f"Warning: Firestore load devotional error: {e}")
+    if not DEVOTIONAL_CACHE_FILE.exists():
+        return {}
+    try:
+        with open(DEVOTIONAL_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_devotional_cache(data: dict):
+    if firestore_db:
+        try:
+            firestore_db.collection("imago_meta").document("devotional_cache").set(data, merge=True)
+        except Exception as e:
+            print(f"Warning: Firestore save devotional error: {e}")
+    try:
+        with open(DEVOTIONAL_CACHE_FILE, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception:
+        pass
+
+@app.get("/api/devotional/today")
+async def get_today_devotional():
+    today_str = datetime.date.today().isoformat()
+    cache = load_devotional_cache()
+    
+    if today_str in cache:
+        return cache[today_str]
+        
+    day_of_year = datetime.date.today().timetuple().tm_yday
+    v_info = DAILY_VERSES[day_of_year % len(DAILY_VERSES)]
+    
+    reflection = f"Beloved, today God reminds you through {v_info['verse']} that His eye is upon you. Walk with confidence knowing that His presence goes before you."
+    action_step = f"Take 60 seconds today to meditate on {v_info['verse']} and thank God for His faithfulness."
+    
+    if GEMINI_API_KEY:
+        try:
+            prompt = (
+                f"Create a short 2-paragraph pastoral daily devotional reflection and a 1-sentence practical daily action step for this scripture:\n"
+                f"Scripture: {v_info['verse']} - {v_info['text']}\nTheme: {v_info['theme']}\n\n"
+                f"Write in a warm, encouraging pastoral tone. Output JSON format strictly with keys 'reflection' and 'action_step'."
+            )
+            response = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.7,
+                )
+            )
+            data = json.loads(response.text)
+            reflection = data.get("reflection", reflection)
+            action_step = data.get("action_step", action_step)
+        except Exception as e:
+            print(f"AI Devotional Generation fallback: {e}")
+
+    result = {
+        "date": today_str,
+        "verse": v_info["verse"],
+        "text": v_info["text"],
+        "theme": v_info["theme"],
+        "reflection": reflection,
+        "action_step": action_step
+    }
+    
+    cache[today_str] = result
+    save_devotional_cache(cache)
+    return result
+
+
+
 
 class YouTubeRequest(BaseModel):
     channel_url: str
