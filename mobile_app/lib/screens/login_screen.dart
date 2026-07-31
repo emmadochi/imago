@@ -63,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final cred = await AuthService.instance.signUpWithEmailAndPassword(email, password);
         if (cred?.user != null) {
           await cred!.user!.updateDisplayName(name);
+          await cred.user!.reload();
         }
       } else {
         await AuthService.instance.signInWithEmailAndPassword(email, password);

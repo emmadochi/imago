@@ -31,6 +31,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadStats() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await user.reload();
+      } catch (_) {}
+    }
+
     final streak = await TrackingService.instance.getPrayerStreak();
     final chats = await TrackingService.instance.getConversationsCount();
     final moodHist = await TrackingService.instance.getMoodHistory();
@@ -277,7 +284,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final displayName = user?.displayName ?? 'Beloved';
+    String rawName = user?.displayName ?? '';
+    if (rawName.isEmpty && user?.email != null && user!.email!.contains('@')) {
+      rawName = user.email!.split('@').first;
+      rawName = rawName[0].toUpperCase() + rawName.substring(1);
+    }
+    if (rawName.isEmpty) rawName = 'Beloved';
+    final displayName = rawName;
     final email = user?.email ?? '';
     final firstName = displayName.split(' ').first;
 

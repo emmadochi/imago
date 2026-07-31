@@ -259,7 +259,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final firstName = (user?.displayName ?? 'Beloved').split(' ').first;
+    String rawName = user?.displayName ?? '';
+    if (rawName.isEmpty && user?.email != null && user!.email!.contains('@')) {
+      rawName = user.email!.split('@').first;
+      rawName = rawName[0].toUpperCase() + rawName.substring(1);
+    }
+    if (rawName.isEmpty) rawName = 'Beloved';
+    final firstName = rawName.split(' ').first;
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good morning'
