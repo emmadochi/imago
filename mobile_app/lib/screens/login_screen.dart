@@ -13,26 +13,44 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _confirmPasswordCtrl = TextEditingController();
+
   bool _isSignUp = false;
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submitEmailAuth() async {
+    final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
+    final confirmPassword = _confirmPasswordCtrl.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Please enter both email and password.');
       return;
+    }
+
+    if (_isSignUp) {
+      if (name.isEmpty) {
+        setState(() => _errorMessage = 'Please enter your full name.');
+        return;
+      }
+      if (password != confirmPassword) {
+        setState(() => _errorMessage = 'Passwords do not match.');
+        return;
+      }
     }
 
     setState(() {
@@ -42,7 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_isSignUp) {
-        await AuthService.instance.signUpWithEmailAndPassword(email, password);
+        final cred = await AuthService.instance.signUpWithEmailAndPassword(email, password);
+        if (cred?.user != null) {
+          await cred!.user!.updateDisplayName(name);
+        }
       } else {
         await AuthService.instance.signInWithEmailAndPassword(email, password);
       }
@@ -152,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 32),
 
                     // Glassmorphic Auth Card
                     Container(
@@ -169,12 +190,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.all(24.0),
                             child: Column(
                               children: [
-                                // Tab selector Sign In vs Sign Up
+                                // Tab selector Sign In vs Create Account
                                 Row(
                                   children: [
                                     Expanded(
                                       child: GestureDetector(
-                                        onTap: () => setState(() => _isSignUp = false),
+                                        onTap: () => setState(() {
+                                          _isSignUp = false;
+                                          _errorMessage = null;
+                                        }),
                                         child: Column(
                                           children: [
                                             Text(
@@ -197,7 +221,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     Expanded(
                                       child: GestureDetector(
-                                        onTap: () => setState(() => _isSignUp = true),
+                                        onTap: () => setState(() {
+                                          _isSignUp = true;
+                                          _errorMessage = null;
+                                        }),
                                         child: Column(
                                           children: [
                                             Text(
@@ -225,7 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 if (_errorMessage != null) ...[
                                   Container(
-                                    padding: const EdgeInsets.all(10),
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: Colors.redAccent.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(12),
@@ -237,6 +265,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
+                                ],
+
+                                // Name input (Create Account only)
+                                if (_isSignUp) ...[
+                                  TextField(
+                                    controller: _nameCtrl,
+                                    keyboardType: TextInputType.name,
+                                    style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.person_outline_rounded, color: Colors.white54, size: 20),
+                                      hintText: 'Full Name (e.g. John Doe)',
+                                      hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.white.withOpacity(0.35), fontSize: 14),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.05),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
                                 ],
 
                                 // Email input
@@ -271,9 +317,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
 
+                                // Confirm Password input (Create Account only)
+                                if (_isSignUp) ...[
+                                  const SizedBox(height: 14),
+                                  TextField(
+                                    controller: _confirmPasswordCtrl,
+                                    obscureText: true,
+                                    style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.lock_reset_rounded, color: Colors.white54, size: 20),
+                                      hintText: 'Confirm Password',
+                                      hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.white.withOpacity(0.35), fontSize: 14),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.05),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                    ),
+                                  ),
+                                ],
+
                                 const SizedBox(height: 20),
 
-                                // Email Submit Button
+                                // Submit Button
                                 GestureDetector(
                                   onTap: _isLoading ? null : _submitEmailAuth,
                                   child: Container(
@@ -290,7 +354,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       child: _isLoading
                                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                           : Text(
-                                              _isSignUp ? 'Sign Up' : 'Sign In',
+                                              _isSignUp ? 'Create Account' : 'Sign In',
                                               style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                                             ),
                                     ),
