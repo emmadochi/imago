@@ -283,6 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     final bool isGuest = user == null;
     String rawName = user?.displayName ?? '';
     if (rawName.isEmpty && user?.email != null && user!.email!.contains('@')) {
