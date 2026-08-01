@@ -283,15 +283,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final bool isGuest = user == null;
     String rawName = user?.displayName ?? '';
     if (rawName.isEmpty && user?.email != null && user!.email!.contains('@')) {
       rawName = user.email!.split('@').first;
       rawName = rawName[0].toUpperCase() + rawName.substring(1);
     }
-    if (rawName.isEmpty) rawName = 'Beloved';
+    if (rawName.isEmpty) rawName = isGuest ? 'Guest User' : 'Beloved';
     final displayName = rawName;
-    final email = user?.email ?? '';
+    final email = isGuest ? 'Sign in to sync your cloud profile' : (user?.email ?? '');
+    final badgeText = isGuest ? 'Guest Mode' : 'Verified Member';
     final firstName = displayName.split(' ').first;
 
     final stats = {
@@ -427,9 +428,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: const Color(0xFF6B4EFF)
                                             .withOpacity(0.3)),
                                   ),
-                                  child: const Text(
-                                    'Member',
-                                    style: TextStyle(
+                                  child: Text(
+                                    badgeText,
+                                    style: const TextStyle(
                                         color: Color(0xFF9B79FF),
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.bold),
