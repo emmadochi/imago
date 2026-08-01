@@ -68,6 +68,7 @@ class _ChatScreenState extends State<ChatScreen>
   // Using Render for production!
   final String _backendUrl = 'https://imago-1-wkzl.onrender.com';
   bool _autoReadEnabled = false;
+  String _selectedLanguage = 'English';
   
   @override
   void initState() {
@@ -93,6 +94,7 @@ class _ChatScreenState extends State<ChatScreen>
     _prefs = await SharedPreferences.getInstance();
     setState(() {
       _autoReadEnabled = _prefs?.getBool('auto_read_enabled') ?? false;
+      _selectedLanguage = _prefs?.getString('selected_language') ?? 'English';
     });
     final String? chatsJson = _prefs!.getString('chat_history');
     if (chatsJson != null) {
@@ -227,6 +229,7 @@ class _ChatScreenState extends State<ChatScreen>
         body: jsonEncode({
           'message': query, 
           'mood': _selectedMood,
+          'language': _selectedLanguage,
           'history': _buildHistoryPayload()
         }),
       ).timeout(const Duration(seconds: 90));
@@ -455,6 +458,8 @@ class _ChatScreenState extends State<ChatScreen>
                     ],
                   ),
                 ),
+                _buildLanguageSelector(),
+                const SizedBox(width: 4),
                 IconButton(
                   icon: Icon(
                     _autoReadEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
@@ -488,6 +493,67 @@ class _ChatScreenState extends State<ChatScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLanguageSelector() {
+    final Map<String, String> langFlags = {
+      'English': '🇬🇧 EN',
+      'Pidgin': '🇳🇬 Pidgin',
+      'Igbo': '🟢 Igbo',
+      'Hausa': '🔴 Hausa',
+      'Yoruba': '🟡 Yoruba',
+    };
+
+    return PopupMenuButton<String>(
+      initialValue: _selectedLanguage,
+      tooltip: 'Select Language',
+      onSelected: (lang) {
+        setState(() => _selectedLanguage = lang);
+        _prefs?.setString('selected_language', lang);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Language switched to $lang'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      color: const Color(0xFF1B1147),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF5C6BC0).withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF5C6BC0).withOpacity(0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              langFlags[_selectedLanguage] ?? '🇬🇧 EN',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                color: Colors.white,
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(Icons.arrow_drop_down_rounded, color: Colors.white70, size: 16),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) => [
+        const PopupMenuItem(value: 'English', child: Text('🇬🇧 English')),
+        const PopupMenuItem(value: 'Pidgin', child: Text('🇳🇬 Nigerian Pidgin')),
+        const PopupMenuItem(value: 'Igbo', child: Text('🟢 Igbo (Ndesịrị Igbo)')),
+        const PopupMenuItem(value: 'Hausa', child: Text('🔴 Hausa')),
+        const PopupMenuItem(value: 'Yoruba', child: Text('🟡 Yoruba (Èdè Yorùbá)')),
+      ],
     );
   }
 

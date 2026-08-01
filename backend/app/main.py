@@ -276,6 +276,7 @@ class ChatRequest(BaseModel):
     message: str
     mood: str = "Neutral"
     history: list[dict] = []
+    language: str = "English"
 
 class ChatResponse(BaseModel):
     response: str
@@ -337,7 +338,7 @@ def get_recommended_sermon(query: str, mood: str) -> dict:
         
     return None
 
-async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> dict:
+async def perform_rag_pipeline(query: str, mood: str, history: list = None, language: str = "English") -> dict:
     # Check configurations first
     if not client or index is None:
         return {
@@ -411,6 +412,15 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
     }
     mood_directive = mood_directives.get(mood, "Speak with empathy, grace, and biblical accuracy.")
 
+    # Define language directives
+    lang_directives = {
+        "Pidgin": " CRITICAL LANGUAGE INSTRUCTION: The user selected Nigerian Pidgin English. Respond ENTIRELY in authentic, warm, and natural Nigerian Pidgin English (e.g., 'My pikin, make your heart no fail. God dey with you everywhere you step...'). Keep it deeply encouraging and pastoral.",
+        "Igbo": " CRITICAL LANGUAGE INSTRUCTION: The user selected Igbo. Respond ENTIRELY in fluent, grammatically sound Igbo language (e.g., 'Nwa m, atụla egwu. Chineke nọ mma n'akụkụ gị oge niile...').",
+        "Hausa": " CRITICAL LANGUAGE INSTRUCTION: The user selected Hausa. Respond ENTIRELY in fluent Hausa language (e.g., 'Ɗana, kada ka ji tsoro. Ubangiji yana tare da kai koyaushe...').",
+        "Yoruba": " CRITICAL LANGUAGE INSTRUCTION: The user selected Yoruba. Respond ENTIRELY in fluent Yoruba language with proper diacritics (e.g., 'Ọmọ mi, má ṣe bẹ̀rù. Olúwa wà pẹ̀lú rẹ ni gbogbo ọ̀nà rẹ...').",
+    }
+    lang_directive = lang_directives.get(language, "")
+
     # Load YouTube Videos
     yt_videos = load_youtube_videos()
     yt_context = ""
@@ -433,14 +443,15 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
     system_instruction = (
         "You are Imago, a highly interactive and compassionate virtual pastoral assistant for a Christian church. "
         "Be naturally conversational, just like ChatGPT or a real human companion. "
-        "If the user says a simple greeting like 'hi' or 'hello', warmly welcome them back (e.g., 'Hello, beloved! How can I support you today?') without forcing a deep theological lesson. "
+        "If the user says a simple greeting like 'hi' or 'hello', warmly welcome them back without forcing a deep theological lesson. "
         "When they share a struggle, weave the provided pastoral context naturally into your conversational response. "
         "Do not invent doctrines. "
-        f"{mood_directive}"
-        f"{yt_context}"
+        f"{mood_directive} "
+        f"{lang_directive} "
+        f"{yt_context} "
         f"{podcast_context}"
     )
-    
+
     # Build history for the Gemini contents list
     contents = []
     for h in (history or []):
@@ -454,7 +465,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
         contents.append(genai_types.Content(role=role, parts=[genai_types.Part(text=text_part)]))
     
     # Add current query
-    full_prompt = f"PASTORAL CONTEXT:\n{unified_context}\n\nUSER QUESTION: {query}"
+    full_prompt = f"PASTORAL CONTEXT:\n{unified_context}\n\nUSER QUESTION ({language}): {query}"
     contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=full_prompt)]))
 
     try:
@@ -474,7 +485,6 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None) -> d
         }
     except Exception as e:
         print(f"ERROR: Gemini generation failed: {e}")
-        # Graceful scripture fallback — never show a raw 500 to the user
         return {
             "response": (
                 "I encountered a momentary difficulty reaching our AI systems. "
@@ -499,7 +509,7 @@ async def chat_endpoint(request: ChatRequest):
         )
         
     try:
-        result = await perform_rag_pipeline(request.message, request.mood, request.history)
+        result = await perform_rag_pipeline(request.message, request.mood, request.history, request.language)
         sermon_rec = get_recommended_sermon(request.message, request.mood)
         return ChatResponse(
             response=result["response"],
