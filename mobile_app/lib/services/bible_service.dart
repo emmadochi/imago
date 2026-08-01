@@ -2,6 +2,8 @@
 // Singleton service for reading MySword .bbl.mybible SQLite databases
 
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -133,7 +135,16 @@ class BibleService {
 
   /// Returns all verses for a given book + chapter.
   Future<List<BibleVerse>> getVerses(int bookNumber, int chapter, {String? translationAbbreviation}) async {
-    final db = await _getDb(translationAbbreviation ?? _currentTranslation);
+    final trans = translationAbbreviation ?? _currentTranslation;
+    final Map<String, String> localLangs = {
+      'NPB': 'Pidgin',
+      'IGBO': 'Igbo',
+      'HAUSA': 'Hausa',
+      'YORUBA': 'Yoruba',
+    };
+
+    final String baseTrans = localLangs.containsKey(trans) ? 'KJV' : trans;
+    final db = await _getDb(baseTrans);
     final isMySword = await _isMySwordFormat(db);
     final table = isMySword ? 'Bible' : 'verses';
     final colChapter = isMySword ? 'Chapter' : 'chapter';
@@ -146,7 +157,8 @@ class BibleService {
       'SELECT $colVerse as v, $colScripture as s FROM $table WHERE $colBook = ? AND $colChapter = ? ORDER BY $colVerse',
       [bookNumber, chapter],
     );
-    return rows
+
+    List<BibleVerse> baseVerses = rows
         .map((r) => BibleVerse(
               book: bookNumber,
               chapter: chapter,
@@ -155,6 +167,47 @@ class BibleService {
               bookName: bookName,
             ))
         .toList();
+
+    if (localLangs.containsKey(trans) && baseVerses.isNotEmpty) {
+      try {
+        final targetLang = localLangs[trans]!;
+        final payload = {
+          'book': bookName,
+          'chapter': chapter,
+          'language': targetLang,
+          'verses': baseVerses.map((v) => {'verse': v.verse, 'text': v.text}).toList(),
+        };
+
+        final res = await http.post(
+          Uri.parse('https://imago-1-wkzl.onrender.com/api/bible/translate'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        ).timeout(const Duration(seconds: 25));
+
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['status'] == 'success' && data['verses'] != null) {
+            final List<dynamic> translatedList = data['verses'];
+            final Map<int, String> transMap = {
+              for (var item in translatedList) (item['verse'] as int): (item['text'] as String)
+            };
+            return baseVerses.map((v) {
+              return BibleVerse(
+                book: v.book,
+                chapter: v.chapter,
+                verse: v.verse,
+                text: transMap[v.verse] ?? v.text,
+                bookName: v.bookName,
+              );
+            }).toList();
+          }
+        }
+      } catch (e) {
+        print("WARNING: Bible local translation error for $trans: $e");
+      }
+    }
+
+    return baseVerses;
   }
 
   /// Full-text search across all verses.

@@ -523,6 +523,80 @@ async def chat_endpoint(request: ChatRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+class BibleTranslateRequest(BaseModel):
+    book: str
+    chapter: int
+    language: str
+    verses: list[dict]
+
+BIBLE_CACHE_FILE = DATA_DIR / "bible_translations_cache.json"
+
+def load_bible_cache() -> dict:
+    if firestore_db:
+        try:
+            doc = firestore_db.collection("imago_meta").document("bible_cache").get()
+            if doc.exists:
+                return doc.to_dict().get("cache", {})
+        except Exception:
+            pass
+    if not BIBLE_CACHE_FILE.exists():
+        return {}
+    try:
+        with open(BIBLE_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_bible_cache(cache: dict):
+    if firestore_db:
+        try:
+            firestore_db.collection("imago_meta").document("bible_cache").set({"cache": cache}, merge=True)
+        except Exception:
+            pass
+    try:
+        with open(BIBLE_CACHE_FILE, "w") as f:
+            json.dump(cache, f, indent=2)
+    except Exception:
+        pass
+
+@app.post("/api/bible/translate")
+async def translate_bible_chapter(body: BibleTranslateRequest):
+    cache_key = f"{body.language}_{body.book}_{body.chapter}"
+    cache = load_bible_cache()
+    if cache_key in cache:
+        return {"status": "success", "verses": cache[cache_key]}
+    
+    if not client:
+        return {"status": "fallback", "verses": body.verses}
+        
+    prompt = (
+        f"You are an expert biblical scholar and translator. Translate the following verses of {body.book} Chapter {body.chapter} "
+        f"into {body.language}.\n"
+        f"Language rules:\n"
+        f"- If Pidgin: Use authentic, natural, respectful Nigerian Pidgin English (e.g., 'For God so love the world say...').\n"
+        f"- If Igbo: Use standard, grammatically sound Igbo (Baịbụl Nsọ style).\n"
+        f"- If Hausa: Use clear Hausa (Littafi Mai Tsarki style).\n"
+        f"- If Yoruba: Use standard Yoruba with proper diacritics (Bíbélì Mímọ́ style).\n\n"
+        f"Input Verses:\n" + json.dumps(body.verses, indent=2) + "\n\n"
+        f"Return ONLY a JSON array of objects with keys 'verse' (int) and 'text' (string). Do not add markdown formatting or extra text."
+    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3
+            )
+        )
+        translated_verses = json.loads(response.text.strip())
+        cache[cache_key] = translated_verses
+        save_bible_cache(cache)
+        return {"status": "success", "verses": translated_verses}
+    except Exception as e:
+        print(f"ERROR: Bible translation failed: {e}")
+        return {"status": "fallback", "verses": body.verses}
+
 @app.post("/api/chat/audio", response_model=ChatResponse)
 async def chat_audio_endpoint(
     file: UploadFile = File(...), 
