@@ -446,6 +446,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
         "If the user says a simple greeting like 'hi' or 'hello', warmly welcome them back without forcing a deep theological lesson. "
         "When they share a struggle, weave the provided pastoral context naturally into your conversational response. "
         "Do not invent doctrines. "
+        "Always complete your thoughts, scriptures, and counsel fully with a warm closing blessing. Never cut off or leave sentences incomplete. "
         f"{mood_directive} "
         f"{lang_directive} "
         f"{yt_context} "
@@ -475,7 +476,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7,
-                max_output_tokens=1024,
+                max_output_tokens=2048,
             )
         )
         return {
@@ -573,6 +574,7 @@ async def translate_bible_chapter(body: BibleTranslateRequest):
         f"You are an expert biblical scholar and translator. Translate the following verses of {body.book} Chapter {body.chapter} "
         f"into {body.language}.\n"
         f"Language rules:\n"
+        f"- If The Living Bible: Paraphrase accurately into the classic, easy-to-understand, dynamic paraphrase style of Kenneth N. Taylor's The Living Bible (TLB).\n"
         f"- If Pidgin: Use authentic, natural, respectful Nigerian Pidgin English (e.g., 'For God so love the world say...').\n"
         f"- If Igbo: Use standard, grammatically sound Igbo (Baịbụl Nsọ style).\n"
         f"- If Hausa: Use clear Hausa (Littafi Mai Tsarki style).\n"
@@ -929,7 +931,7 @@ async def prayer_endpoint(body: PrayerRequest):
             config=genai_types.GenerateContentConfig(
                 system_instruction=prayer_system_instruction,
                 temperature=0.8,
-                max_output_tokens=512,
+                max_output_tokens=1024,
             )
         )
 
