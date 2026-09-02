@@ -205,6 +205,39 @@ if GEMINI_API_KEY:
 else:
     print("WARNING: GEMINI_API_KEY is not set in .env file.")
 
+def call_gemini_with_fallback(contents, config=None):
+    """Resiliently executes Gemini generation with automatic fallback across supported model identifiers."""
+    models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]
+    last_err = None
+    for m in models:
+        try:
+            return client.models.generate_content(
+                model=m,
+                contents=contents,
+                config=config,
+            )
+        except Exception as e:
+            last_err = e
+            print(f"WARN: Gemini model '{m}' failed: {e}. Trying fallback...")
+    raise last_err or RuntimeError("All Gemini generation models failed")
+
+def embed_content_with_fallback(text: str, task_type: str = "RETRIEVAL_QUERY"):
+    """Resiliently executes Gemini text embedding with fallback models."""
+    models = ["text-embedding-004", "gemini-embedding-exp-03-07"]
+    last_err = None
+    for m in models:
+        try:
+            res = client.models.embed_content(
+                model=m,
+                contents=text,
+                config=genai_types.EmbedContentConfig(task_type=task_type)
+            )
+            return res.embeddings[0].values
+        except Exception as e:
+            last_err = e
+            print(f"WARN: Embedding model '{m}' failed: {e}. Trying fallback...")
+    raise last_err or RuntimeError("All Gemini embedding models failed")
+
 index = None
 if PINECONE_API_KEY:
     try:
@@ -353,34 +386,23 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
 
     try:
         # 1. Embed query using Gemini
-        embed_response = client.models.embed_content(
-            model="gemini-embedding-2",
-            contents=query,
-            config=genai_types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
-        )
-        query_vector = embed_response.embeddings[0].values
+        query_vector = embed_content_with_fallback(query, task_type="RETRIEVAL_QUERY")
     except Exception as e:
         print(f"ERROR: Embedding failed: {e}")
-        return {
-            "response": "I am having trouble searching our teaching library right now. Please try again in a moment.",
-            "sources": [],
-            "handoff_required": False
-        }
+        query_vector = None
     
-    try:
-        # 2. Query Pinecone vector DB
-        query_results = index.query(
-            vector=query_vector,
-            top_k=3,
-            include_metadata=True
-        )
-    except Exception as e:
-        print(f"ERROR: Pinecone query failed: {e}")
-        return {
-            "response": "I am having trouble retrieving teachings right now. Please try again in a moment.",
-            "sources": [],
-            "handoff_required": False
-        }
+    query_results = {}
+    if query_vector is not None and index is not None:
+        try:
+            # 2. Query Pinecone vector DB
+            query_results = index.query(
+                vector=query_vector,
+                top_k=3,
+                include_metadata=True
+            )
+        except Exception as e:
+            print(f"ERROR: Pinecone query failed: {e}")
+            query_results = {}
     
     # 3. Compile context & sources
     contexts = []
@@ -470,8 +492,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
     contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=full_prompt)]))
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.5-flash",
+        response = call_gemini_with_fallback(
             contents=contents,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -583,8 +604,7 @@ async def translate_bible_chapter(body: BibleTranslateRequest):
         f"Return ONLY a JSON array of objects with keys 'verse' (int) and 'text' (string). Do not add markdown formatting or extra text."
     )
     try:
-        response = client.models.generate_content(
-            model="gemini-3.5-flash",
+        response = call_gemini_with_fallback(
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -618,8 +638,7 @@ async def chat_audio_endpoint(
 
         transcript = ""
         try:
-            transcript_response = client.models.generate_content(
-                model="gemini-3.5-flash",
+            transcript_response = call_gemini_with_fallback(
                 contents=[
                     genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime),
                     "Transcribe this audio accurately. Only output the transcription, no additional text."
@@ -788,16 +807,8 @@ async def upload_sermon_endpoint(file: UploadFile = File(...)):
         for idx, chunk in enumerate(chunks):
             chunk_id = f"{filename}_{idx}"
             
-            # Embed with Gemini (new SDK)
-            embed_response = client.models.embed_content(
-                model="gemini-embedding-2",
-                contents=chunk,
-                config=genai_types.EmbedContentConfig(
-                    task_type="RETRIEVAL_DOCUMENT",
-                    title=title
-                )
-            )
-            embedding = embed_response.embeddings[0].values
+            # Embed with Gemini
+            embedding = embed_content_with_fallback(chunk, task_type="RETRIEVAL_DOCUMENT")
             
             vectors_to_upsert.append({
                 "id": chunk_id,
@@ -893,12 +904,7 @@ async def prayer_endpoint(body: PrayerRequest):
 
     try:
         # Embed the prayer request and retrieve related teachings
-        embed_response = client.models.embed_content(
-            model="gemini-embedding-2",
-            contents=body.request,
-            config=genai_types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
-        )
-        query_vector = embed_response.embeddings[0].values
+        query_vector = embed_content_with_fallback(body.request, task_type="RETRIEVAL_QUERY")
 
         query_results = index.query(
             vector=query_vector,
@@ -925,8 +931,7 @@ async def prayer_endpoint(body: PrayerRequest):
 
         prompt = f"BIBLICAL CONTEXT:\n{unified_context}\n\nPRAYER REQUEST: {body.request}"
         
-        response = client.models.generate_content(
-            model="gemini-3.5-flash",
+        response = call_gemini_with_fallback(
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 system_instruction=prayer_system_instruction,
@@ -1102,8 +1107,7 @@ async def get_today_devotional():
                 f"Scripture: {v_info['verse']} - {v_info['text']}\nTheme: {v_info['theme']}\n\n"
                 f"Write in a warm, encouraging pastoral tone. Output JSON format strictly with keys 'reflection' and 'action_step'."
             )
-            response = client.models.generate_content(
-                model="gemini-3.5-flash",
+            response = call_gemini_with_fallback(
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
