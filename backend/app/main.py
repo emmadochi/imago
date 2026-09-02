@@ -498,7 +498,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7,
-                max_output_tokens=2048,
+                max_output_tokens=8192,
             )
         )
         return {
