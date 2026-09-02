@@ -1,5 +1,6 @@
 import os
 import io
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Form, HTTPException, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -207,7 +208,7 @@ else:
 
 def call_gemini_with_fallback(contents, config=None):
     """Resiliently executes Gemini generation with automatic fallback across supported model identifiers."""
-    models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]
+    models = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"]
     last_err = None
     for m in models:
         try:
@@ -223,7 +224,7 @@ def call_gemini_with_fallback(contents, config=None):
 
 def embed_content_with_fallback(text: str, task_type: str = "RETRIEVAL_QUERY"):
     """Resiliently executes Gemini text embedding with fallback models."""
-    models = ["text-embedding-004", "gemini-embedding-exp-03-07"]
+    models = ["gemini-embedding-2", "gemini-embedding-001", "text-embedding-004"]
     last_err = None
     for m in models:
         try:
