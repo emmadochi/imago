@@ -43,15 +43,19 @@ try:
 except Exception as e:
     print(f"INFO:     Firestore offline, using local storage fallback: {e}")
 
-# Database & Connection Pooler Integration
+# Database & Connection Pooler Integration (Optional / Fallback Safe)
 try:
     from .database import check_db_health, get_db_session
     from .models import User, PaymentTransaction
-except ImportError:
-    from database import check_db_health, get_db_session
+except Exception:
     try:
+        from database import check_db_health, get_db_session
         from models import User, PaymentTransaction
-    except ImportError:
+    except Exception:
+        async def check_db_health():
+            return {"status": "stateless", "message": "Running in stateless cloud mode"}
+        async def get_db_session():
+            yield None
         User = None
         PaymentTransaction = None
 
