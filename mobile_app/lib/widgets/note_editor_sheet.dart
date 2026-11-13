@@ -10,11 +10,14 @@ class NoteEditorSheet extends StatefulWidget {
   final BibleNote? initialNote;
   final VoidCallback onSaved;
 
+  final ReaderTheme? readerTheme;
+
   const NoteEditorSheet({
     super.key,
     required this.verse,
     this.initialNote,
     required this.onSaved,
+    this.readerTheme,
   });
 
   static void show(
@@ -22,11 +25,13 @@ class NoteEditorSheet extends StatefulWidget {
     required BibleVerse verse,
     BibleNote? initialNote,
     required VoidCallback onSaved,
+    ReaderTheme? readerTheme,
   }) {
+    final theme = readerTheme ?? ReaderTheme.current;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -34,6 +39,7 @@ class NoteEditorSheet extends StatefulWidget {
         verse: verse,
         initialNote: initialNote,
         onSaved: onSaved,
+        readerTheme: theme,
       ),
     );
   }
@@ -120,6 +126,13 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final theme = widget.readerTheme ?? ReaderTheme.current;
+    final isDark = theme.isDark;
+    final textPrimary = theme.primaryText;
+    final textSecondary = theme.secondaryText;
+    final accent = theme.accentColor;
+    final containerBg = isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC);
+    final borderColor = theme.borderColor;
     
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -137,17 +150,17 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                     '${widget.verse.bookName} ${widget.verse.chapter}:${widget.verse.verse}',
                     style: TextStyle(
                       fontFamily: 'Cinzel',
-                      color: ImagoColors.gold,
+                      color: accent,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Study Notes',
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Colors.white54,
+                      color: textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -158,7 +171,7 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    color: ImagoColors.gold,
+                    color: accent,
                     strokeWidth: 2,
                   ),
                 )
@@ -168,14 +181,14 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      gradient: ImagoColors.goldGradient,
+                      color: accent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'Save',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: Colors.black87,
+                        color: isDark ? (accent == ImagoColors.gold ? Colors.black87 : Colors.white) : Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -184,14 +197,14 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                 ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: containerBg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: borderColor),
               ),
               child: TextField(
                 controller: _controller,
@@ -200,7 +213,7 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                 autofocus: true,
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  color: Colors.white,
+                  color: textPrimary,
                   fontSize: 14,
                   height: 1.5,
                 ),
@@ -209,7 +222,7 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
                   hintText: 'Write your notes here...',
                   hintStyle: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.white.withOpacity(0.4),
+                    color: textSecondary.withOpacity(0.6),
                   ),
                 ),
               ),

@@ -1,6 +1,5 @@
 // lib/services/user_data_service.dart
 
-import 'dart:io';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -21,7 +20,7 @@ class UserDataService {
 
     _db = await openDatabase(
       dbPath,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE journal_entries (
@@ -87,6 +86,30 @@ class UserDataService {
             last_read_at INTEGER
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE bible_lists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            description TEXT,
+            color_hex TEXT,
+            is_preset INTEGER DEFAULT 0,
+            created_at INTEGER,
+            updated_at INTEGER
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE bible_list_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            list_id INTEGER,
+            reference TEXT,
+            custom_title TEXT,
+            sort_order INTEGER,
+            created_at INTEGER,
+            FOREIGN KEY (list_id) REFERENCES bible_lists (id) ON DELETE CASCADE
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -147,8 +170,33 @@ class UserDataService {
             )
           ''');
         }
+        if (oldVersion < 6) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS bible_lists (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT,
+              description TEXT,
+              color_hex TEXT,
+              is_preset INTEGER DEFAULT 0,
+              created_at INTEGER,
+              updated_at INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS bible_list_items (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              list_id INTEGER,
+              reference TEXT,
+              custom_title TEXT,
+              sort_order INTEGER,
+              created_at INTEGER,
+              FOREIGN KEY (list_id) REFERENCES bible_lists (id) ON DELETE CASCADE
+            )
+          ''');
+        }
       },
     );
+    await _seedPresetsIfEmpty();
   }
 
   // --- Highlights ---
@@ -337,5 +385,207 @@ class UserDataService {
     final maps = await _db!.query('journal_entries', orderBy: 'updated_at DESC');
     return maps.map((m) => JournalEntry.fromMap(m)).toList();
   }
+
+  // --- Bible Lists ---
+
+  Future<void> _seedPresetsIfEmpty() async {
+    if (_db == null) return;
+    final count = Sqflite.firstIntValue(await _db!.rawQuery('SELECT COUNT(*) FROM bible_lists')) ?? 0;
+    if (count > 0) return;
+
+    final presets = [
+      {
+        'title': 'Peace & Rest',
+        'description': 'Scriptures to soothe anxiety, quiet the heart, and anchor your soul in divine peace.',
+        'color': '#3D5AFE',
+        'items': ['Psalm 23:1-6', 'Philippians 4:6-7', 'John 14:27', 'Matthew 11:28-30', 'Psalm 91:1-4'],
+      },
+      {
+        'title': 'Divine Healing & Renewal',
+        'description': 'Scriptures of health, restoration, and life-giving strength for body and mind.',
+        'color': '#00E676',
+        'items': ['Isaiah 53:4-5', 'Psalm 103:1-5', 'Jeremiah 30:17', '1 Peter 2:24', 'Exodus 15:26'],
+      },
+      {
+        'title': 'Victory & Faith Declarations',
+        'description': 'Unshakable promises of victory, boldness, and conquering faith in Christ.',
+        'color': '#FFC857',
+        'items': ['Romans 8:31-39', 'Hebrews 11:1-6', '2 Timothy 1:7', 'Joshua 1:9', '1 John 4:4'],
+      },
+      {
+        'title': 'Morning Blessings & Strength',
+        'description': 'Begin your day aligned with God\'s grace, renewed strength, and fresh mercy.',
+        'color': '#FF4081',
+        'items': ['Psalm 5:3', 'Lamentations 3:22-24', 'Isaiah 40:29-31', 'Psalm 118:24', 'Proverbs 3:5-6'],
+      },
+    ];
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final p in presets) {
+      final listId = await _db!.insert('bible_lists', {
+        'title': p['title'],
+        'description': p['description'],
+        'color_hex': p['color'],
+        'is_preset': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final items = p['items'] as List<String>;
+      for (int i = 0; i < items.length; i++) {
+        await _db!.insert('bible_list_items', {
+          'list_id': listId,
+          'reference': items[i],
+          'custom_title': '',
+          'sort_order': i,
+          'created_at': now,
+        });
+      }
+    }
+  }
+
+  Future<List<BibleList>> getBibleLists() async {
+    if (_db == null) await init();
+    final listMaps = await _db!.query('bible_lists', orderBy: 'updated_at DESC');
+    final List<BibleList> lists = [];
+
+    for (final map in listMaps) {
+      final listId = map['id'] as int;
+      final itemMaps = await _db!.query(
+        'bible_list_items',
+        where: 'list_id = ?',
+        whereArgs: [listId],
+        orderBy: 'sort_order ASC',
+      );
+      final items = itemMaps.map((m) => BibleListItem.fromMap(m)).toList();
+      lists.add(BibleList.fromMap(map, items: items));
+    }
+    return lists;
+  }
+
+  Future<BibleList?> getBibleListWithItems(int listId) async {
+    if (_db == null) await init();
+    final listMaps = await _db!.query('bible_lists', where: 'id = ?', whereArgs: [listId], limit: 1);
+    if (listMaps.isEmpty) return null;
+
+    final itemMaps = await _db!.query(
+      'bible_list_items',
+      where: 'list_id = ?',
+      whereArgs: [listId],
+      orderBy: 'sort_order ASC',
+    );
+    final items = itemMaps.map((m) => BibleListItem.fromMap(m)).toList();
+    return BibleList.fromMap(listMaps.first, items: items);
+  }
+
+  Future<int> saveBibleList(BibleList list, {List<String>? initialReferences}) async {
+    if (_db == null) await init();
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    int listId;
+    if (list.id != null) {
+      listId = list.id!;
+      await _db!.update(
+        'bible_lists',
+        {
+          'title': list.title,
+          'description': list.description,
+          'color_hex': list.colorHex,
+          'is_preset': list.isPreset ? 1 : 0,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [listId],
+      );
+    } else {
+      listId = await _db!.insert('bible_lists', {
+        'title': list.title,
+        'description': list.description,
+        'color_hex': list.colorHex,
+        'is_preset': list.isPreset ? 1 : 0,
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+
+    if (initialReferences != null && initialReferences.isNotEmpty) {
+      for (int i = 0; i < initialReferences.length; i++) {
+        final ref = initialReferences[i].trim();
+        if (ref.isNotEmpty) {
+          await _db!.insert('bible_list_items', {
+            'list_id': listId,
+            'reference': ref,
+            'custom_title': '',
+            'sort_order': i,
+            'created_at': now,
+          });
+        }
+      }
+    }
+    return listId;
+  }
+
+  Future<void> deleteBibleList(int id) async {
+    if (_db == null) await init();
+    await _db!.delete('bible_list_items', where: 'list_id = ?', whereArgs: [id]);
+    await _db!.delete('bible_lists', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> addScriptureToList(int listId, String reference, {String customTitle = ''}) async {
+    if (_db == null) await init();
+    final countResult = await _db!.rawQuery(
+      'SELECT MAX(sort_order) as max_order FROM bible_list_items WHERE list_id = ?',
+      [listId],
+    );
+    final maxOrder = (countResult.first['max_order'] as int?) ?? -1;
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    await _db!.insert('bible_list_items', {
+      'list_id': listId,
+      'reference': reference.trim(),
+      'custom_title': customTitle.trim(),
+      'sort_order': maxOrder + 1,
+      'created_at': now,
+    });
+
+    await _db!.update(
+      'bible_lists',
+      {'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [listId],
+    );
+  }
+
+  Future<void> deleteListItem(int itemId, int listId) async {
+    if (_db == null) await init();
+    await _db!.delete('bible_list_items', where: 'id = ?', whereArgs: [itemId]);
+    await _db!.update(
+      'bible_lists',
+      {'updated_at': DateTime.now().millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [listId],
+    );
+  }
+
+  Future<void> reorderListItems(int listId, List<int> itemIdsInOrder) async {
+    if (_db == null) await init();
+    final batch = _db!.batch();
+    for (int i = 0; i < itemIdsInOrder.length; i++) {
+      batch.update(
+        'bible_list_items',
+        {'sort_order': i},
+        where: 'id = ?',
+        whereArgs: [itemIdsInOrder[i]],
+      );
+    }
+    batch.update(
+      'bible_lists',
+      {'updated_at': DateTime.now().millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [listId],
+    );
+    await batch.commit(noResult: true);
+  }
 }
+
 

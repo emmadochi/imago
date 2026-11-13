@@ -164,10 +164,9 @@ class InterlinearVerseWidget extends StatelessWidget {
                   token.strongs!,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    color: ImagoColors.gold,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                  ),
+                  ).copyWith(color: ImagoColors.gold),
                 ),
               ),
             ),

@@ -7,12 +7,14 @@ class ColorPickerSheet extends StatelessWidget {
   final String? initialColor;
   final Function(String colorHex) onColorSelected;
   final VoidCallback onRemoveHighlight;
+  final ReaderTheme? readerTheme;
 
   const ColorPickerSheet({
     super.key,
     this.initialColor,
     required this.onColorSelected,
     required this.onRemoveHighlight,
+    this.readerTheme,
   });
 
   static void show(
@@ -20,10 +22,12 @@ class ColorPickerSheet extends StatelessWidget {
     String? initialColor,
     required Function(String colorHex) onColorSelected,
     required VoidCallback onRemoveHighlight,
+    ReaderTheme? readerTheme,
   }) {
+    final theme = readerTheme ?? ReaderTheme.current;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -31,12 +35,18 @@ class ColorPickerSheet extends StatelessWidget {
         initialColor: initialColor,
         onColorSelected: onColorSelected,
         onRemoveHighlight: onRemoveHighlight,
+        readerTheme: theme,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = readerTheme ?? ReaderTheme.current;
+    final isDark = theme.isDark;
+    final textPrimary = theme.primaryText;
+    final accent = theme.accentColor;
+
     // A palette of premium highlight colors
     final List<Map<String, String>> colors = [
       {'name': 'Gold', 'hex': '#D4AF37'},
@@ -56,12 +66,12 @@ class ColorPickerSheet extends StatelessWidget {
             'Highlight Verse',
             style: TextStyle(
               fontFamily: 'Cinzel',
-              color: ImagoColors.gold,
+              color: isDark ? ImagoColors.gold : textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: colors.map((c) {
@@ -80,8 +90,8 @@ class ColorPickerSheet extends StatelessWidget {
                     color: color.withOpacity(0.3),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Colors.white : color,
-                      width: isSelected ? 2 : 1,
+                      color: isSelected ? (isDark ? Colors.white : const Color(0xFF0F172A)) : color,
+                      width: isSelected ? 2.5 : 1,
                     ),
                   ),
                   child: Center(
@@ -98,7 +108,7 @@ class ColorPickerSheet extends StatelessWidget {
               );
             }).toList(),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           if (initialColor != null)
             SizedBox(
               width: double.infinity,
@@ -109,7 +119,7 @@ class ColorPickerSheet extends StatelessWidget {
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: Colors.white.withOpacity(0.06),
+                  backgroundColor: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFFEE2E2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -118,13 +128,13 @@ class ColorPickerSheet extends StatelessWidget {
                   'Remove Highlight',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.red.shade300,
+                    color: isDark ? Colors.red.shade300 : const Color(0xFFDC2626),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
         ],
       ),
     );

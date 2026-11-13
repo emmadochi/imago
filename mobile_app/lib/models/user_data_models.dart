@@ -1,5 +1,7 @@
 // lib/models/user_data_models.dart
 
+import 'bible_models.dart';
+
 class BibleHighlight {
   final int id;
   final int book;
@@ -156,6 +158,129 @@ class BibleTag {
   }
 }
 
+class BibleList {
+  final int? id;
+  final String title;
+  final String description;
+  final String colorHex;
+  final bool isPreset;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<BibleListItem> items;
+
+  BibleList({
+    this.id,
+    required this.title,
+    required this.description,
+    this.colorHex = '#3D5AFE',
+    this.isPreset = false,
+    required this.createdAt,
+    required this.updatedAt,
+    this.items = const [],
+  });
+
+  BibleList copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? colorHex,
+    bool? isPreset,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<BibleListItem>? items,
+  }) {
+    return BibleList(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      colorHex: colorHex ?? this.colorHex,
+      isPreset: isPreset ?? this.isPreset,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      items: items ?? this.items,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'color_hex': colorHex,
+      'is_preset': isPreset ? 1 : 0,
+      'created_at': createdAt.millisecondsSinceEpoch,
+      'updated_at': updatedAt.millisecondsSinceEpoch,
+    };
+  }
+
+  factory BibleList.fromMap(Map<String, dynamic> map, {List<BibleListItem> items = const []}) {
+    return BibleList(
+      id: map['id'] as int?,
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+      colorHex: map['color_hex'] as String? ?? '#3D5AFE',
+      isPreset: (map['is_preset'] as int? ?? 0) == 1,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int? ?? 0),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int? ?? 0),
+      items: items,
+    );
+  }
+}
+
+class BibleListItem {
+  final int? id;
+  final int listId;
+  final String reference;
+  final String customTitle;
+  final int sortOrder;
+  final DateTime createdAt;
+
+  BibleListItem({
+    this.id,
+    required this.listId,
+    required this.reference,
+    this.customTitle = '',
+    required this.sortOrder,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'list_id': listId,
+      'reference': reference,
+      'custom_title': customTitle,
+      'sort_order': sortOrder,
+      'created_at': createdAt.millisecondsSinceEpoch,
+    };
+  }
+
+  factory BibleListItem.fromMap(Map<String, dynamic> map) {
+    return BibleListItem(
+      id: map['id'] as int?,
+      listId: map['list_id'] as int? ?? 0,
+      reference: map['reference'] as String? ?? '',
+      customTitle: map['custom_title'] as String? ?? '',
+      sortOrder: map['sort_order'] as int? ?? 0,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int? ?? 0),
+    );
+  }
+}
+
+class BiblePlaylistItem {
+  final String reference;
+  final String displayTitle;
+  final List<BibleVerse> verses;
+
+  BiblePlaylistItem({
+    required this.reference,
+    required this.displayTitle,
+    required this.verses,
+  });
+
+  String get fullText => verses.map((v) => '${v.verse}. ${v.text}').join(' ');
+  int get totalVerses => verses.length;
+}
 
 class JournalEntry {
   final int? id;
@@ -196,3 +321,4 @@ class JournalEntry {
     );
   }
 }
+

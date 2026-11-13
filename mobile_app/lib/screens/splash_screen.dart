@@ -1,9 +1,13 @@
-import 'dart:ui';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/auth_service.dart';
 import '../theme/imago_theme.dart';
 import 'onboarding_screen.dart';
 import 'main_shell.dart';
+import 'desktop_shell.dart';
+import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -61,10 +65,24 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final hasOnboarded = prefs.getBool('has_onboarded') ?? false;
+    final isPersistedLoggedIn = prefs.getBool('auth_is_logged_in') ?? false;
+    final hasUser = isPersistedLoggedIn || AuthService.instance.isLoggedIn;
+
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => hasOnboarded ? const MainShell() : const OnboardingScreen(),
-    ));
+    if (hasUser) {
+      final isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => isDesktop ? const DesktopShell() : const MainShell(),
+      ));
+    } else if (hasOnboarded) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ));
+    } else {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(),
+      ));
+    }
   }
 
   @override

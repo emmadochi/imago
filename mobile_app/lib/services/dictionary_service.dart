@@ -18,18 +18,16 @@ class DictionaryService {
     
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = join(dir.path, 'bible', 'dictionary.db');
+    final dbFile = File(dbPath);
     
-    // For development: overwrite existing dictionary.db to reflect new updates
-    if (File(dbPath).existsSync()) {
-      await File(dbPath).delete();
+    if (!dbFile.existsSync() || dbFile.lengthSync() < 100000) {
+      await Directory(join(dir.path, 'bible')).create(recursive: true);
+      final bytes = await rootBundle.load('assets/bible/dictionary.db');
+      await dbFile.writeAsBytes(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes), 
+        flush: true,
+      );
     }
-    
-    await Directory(join(dir.path, 'bible')).create(recursive: true);
-    final bytes = await rootBundle.load('assets/bible/dictionary.db');
-    await File(dbPath).writeAsBytes(
-      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes), 
-      flush: true
-    );
     
     _db = await openDatabase(dbPath, readOnly: true);
   }

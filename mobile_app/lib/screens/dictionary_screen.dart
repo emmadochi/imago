@@ -65,26 +65,102 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF040510),
-      body: Stack(
-        children: [
-          const CosmicBackground(children: []),
-          Positioned(
-            top: -40, left: -40,
-            child: CosmicOrb(size: 260, color: const Color(0xFF3D5AFE), opacity: 0.07),
+    return ListenableBuilder(
+      listenable: Listenable.merge([appThemeNotifier, readerThemeNotifier]),
+      builder: (context, _) {
+        final isDark = ImagoColors.isDark;
+        final bg = isDark ? const Color(0xFF0A0E1A) : const Color(0xFFF8FAFC);
+        final cardBg = isDark ? const Color(0xFF131D33) : Colors.white;
+        final border = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+        final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+        final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+        final accent = isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5);
+
+        return Scaffold(
+          backgroundColor: bg,
+          body: Stack(
+            children: [
+              if (isDark) const CosmicBackground(children: []),
+              Positioned(
+                top: -40, left: -40,
+                child: CosmicOrb(size: 260, color: ImagoColors.violet, opacity: isDark ? 0.07 : 0.03),
+              ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildHeader(isDark, cardBg, border, textPrimary),
+                    _buildTabSelector(isDark, cardBg, border, textSecondary),
+                    _buildSearchBar(isDark, cardBg, border, textPrimary, textSecondary),
+                    if (!_initialized || _loading)
+                      Expanded(child: Center(child: CircularProgressIndicator(color: accent)))
+                    else
+                      Expanded(child: _buildWordList(isDark, cardBg, border, textPrimary, textSecondary)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                _buildTabSelector(),
-                _buildSearchBar(),
-                if (!_initialized || _loading)
-                  Expanded(child: Center(child: CircularProgressIndicator(color: ImagoColors.gold)))
-                else
-                  Expanded(child: _buildWordList()),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(bool isDark, Color cardBg, Color border, Color textPrimary) {
+    final canPop = Navigator.canPop(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border(bottom: BorderSide(color: border)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
               ],
+      ),
+      child: Row(
+        children: [
+          if (canPop) ...[
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: border),
+                ),
+                child: Icon(Icons.arrow_back_ios_rounded, color: textPrimary, size: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF4F46E5).withOpacity(0.2) : const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.auto_stories_rounded,
+              color: isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Holy Lexicon & Dictionary',
+              style: TextStyle(
+                fontFamily: 'Cinzel',
+                color: textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -92,49 +168,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.06))),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 16),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Holy Lexicon & Dictionary',
-                  style: TextStyle(
-                    fontFamily: 'Cinzel',
-                    color: ImagoColors.cream,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabSelector() {
+  Widget _buildTabSelector(bool isDark, Color cardBg, Color border, Color textSecondary) {
     final tabs = [
       {'id': 'easton', 'label': 'Theological'},
       {'id': 'greek', 'label': 'Greek NT'},
@@ -146,9 +180,9 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          color: isDark ? const Color(0xFF131D33) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
         ),
         child: Row(
           children: tabs.map((tab) {
@@ -165,10 +199,18 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    gradient: isSelected ? ImagoColors.violetGradient : null,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected
+                        ? (isDark ? const Color(0xFF4F46E5) : const Color(0xFF4F46E5))
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: ImagoColors.violet.withOpacity(0.3), blurRadius: 8)]
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF4F46E5).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
                         : null,
                   ),
                   child: Text(
@@ -176,9 +218,9 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                      color: isSelected ? Colors.white : textSecondary,
                       fontSize: 12.5,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     ),
                   ),
                 ),
@@ -190,7 +232,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDark, Color cardBg, Color border, Color textPrimary, Color textSecondary) {
     String hintText = 'Search terms...';
     if (_selectedType == 'greek') hintText = 'Search Greek, G26, or transliteration...';
     if (_selectedType == 'hebrew') hintText = 'Search Hebrew, H2617, or transliteration...';
@@ -199,24 +241,33 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: border),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: TextField(
           controller: _searchController,
-          style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+          style: TextStyle(color: textPrimary, fontFamily: 'Poppins'),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.35), fontFamily: 'Poppins', fontSize: 13),
-            prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.5)),
+            hintStyle: TextStyle(color: textSecondary.withOpacity(0.7), fontFamily: 'Poppins', fontSize: 13),
+            prefixIcon: Icon(Icons.search_rounded, color: textSecondary),
             suffixIcon: _searchController.text.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
                       _searchController.clear();
                       _runSearch('');
                     },
-                    child: Icon(Icons.close_rounded, color: Colors.white.withOpacity(0.5)),
+                    child: Icon(Icons.close_rounded, color: textSecondary),
                   )
                 : null,
             border: InputBorder.none,
@@ -230,14 +281,14 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     );
   }
 
-  Widget _buildWordList() {
+  Widget _buildWordList(bool isDark, Color cardBg, Color border, Color textPrimary, Color textSecondary) {
     if (_words.isEmpty) {
       return Center(
         child: Text(
           'No entries found.',
           style: TextStyle(
             fontFamily: 'Poppins',
-            color: Colors.white.withOpacity(0.5),
+            color: textSecondary,
             fontSize: 14,
           ),
         ),
@@ -253,7 +304,6 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
         final strongs = item['strongs'] as String?;
         final translit = item['translit'] as String?;
         final pron = item['pron'] as String?;
-        final definition = item['definition'] as String;
         
         return GestureDetector(
           onTap: () => _showDefinitionModal(item),
@@ -261,9 +311,18 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: cardBg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.07)),
+              border: Border.all(color: border),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: Row(
               children: [
@@ -271,21 +330,27 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: ImagoColors.gold.withOpacity(0.15),
+                      color: isDark
+                          ? const Color(0xFFFFC857).withOpacity(0.15)
+                          : const Color(0xFFEEF2FF),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: ImagoColors.gold.withOpacity(0.3)),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFFFFC857).withOpacity(0.3)
+                            : const Color(0xFFC7D2FE),
+                      ),
                     ),
                     child: Text(
                       strongs,
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: ImagoColors.gold,
+                        color: isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5),
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                 ],
                 Expanded(
                   child: Column(
@@ -295,18 +360,18 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                         term,
                         style: TextStyle(
                           fontFamily: 'Cinzel',
-                          color: Colors.white,
+                          color: textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       if (translit != null || pron != null) ...[
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           [if (translit != null) translit, if (pron != null) '($pron)'].join(' '),
                           style: TextStyle(
                             fontFamily: 'Poppins',
-                            color: ImagoColors.cream.withOpacity(0.6),
+                            color: textSecondary,
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
                           ),
@@ -322,8 +387,8 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   type: item['type'] as String? ?? _selectedType,
                   size: 16,
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.3), size: 20),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, color: textSecondary.withOpacity(0.6), size: 20),
               ],
             ),
           ),
@@ -335,6 +400,14 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   Future<void> _showDefinitionModal(Map<String, dynamic> item) async {
     if (!mounted) return;
 
+    final isDark = ImagoColors.isDark;
+    final modalBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final border = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final accentGold = isDark ? const Color(0xFFFFC857) : const Color(0xFFD97706);
+
     final term = item['term'] as String;
     final strongs = item['strongs'] as String?;
     final translit = item['translit'] as String?;
@@ -344,7 +417,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: modalBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -372,28 +445,34 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: ImagoColors.gold.withOpacity(0.2),
+                              color: isDark
+                                  ? const Color(0xFFFFC857).withOpacity(0.2)
+                                  : const Color(0xFFEEF2FF),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: ImagoColors.gold.withOpacity(0.4)),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFFFFC857).withOpacity(0.4)
+                                    : const Color(0xFFC7D2FE),
+                              ),
                             ),
                             child: Text(
                               strongs,
                               style: TextStyle(
                                 fontFamily: 'Poppins',
-                                color: ImagoColors.gold,
+                                color: isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                         ],
                         Expanded(
                           child: Text(
                             term.trim(),
                             style: TextStyle(
                               fontFamily: 'Cinzel',
-                              color: ImagoColors.cream,
+                              color: textPrimary,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -409,50 +488,56 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                       ],
                     ),
                     if (translit != null || pron != null) ...[
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Text(
                         'Transliteration: ${translit ?? ''} ${pron != null ? '($pron)' : ''}',
                         style: TextStyle(
                           fontFamily: 'Poppins',
-                          color: ImagoColors.gold.withOpacity(0.8),
+                          color: accentGold,
                           fontSize: 13,
                           fontStyle: FontStyle.italic,
                         ),
                       ),
                     ],
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     if (simplifiedText != null) ...[
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: ImagoColors.gold.withOpacity(0.1),
+                          color: isDark
+                              ? const Color(0xFFFFC857).withOpacity(0.1)
+                              : const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: ImagoColors.gold.withOpacity(0.3)),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFFFFC857).withOpacity(0.3)
+                                : const Color(0xFFFDE68A),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.auto_awesome, color: ImagoColors.gold, size: 16),
-                                SizedBox(width: 8),
+                                Icon(Icons.auto_awesome, color: accentGold, size: 16),
+                                const SizedBox(width: 8),
                                 Text(
                                   'Simplified Explanation',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
-                                    color: ImagoColors.gold,
+                                    color: accentGold,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
                               simplifiedText!,
                               style: TextStyle(
                                 fontFamily: 'Poppins',
-                                color: Colors.white,
+                                color: textPrimary,
                                 fontSize: 14,
                                 height: 1.5,
                               ),
@@ -465,7 +550,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                         text: definition,
                         onVerseTap: (ref) => _showVersePreview(ref),
                       ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     if (simplifiedText == null)
                       GestureDetector(
                         onTap: isSimplifying
@@ -485,15 +570,22 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
                             gradient: isSimplifying
-                                ? LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.1)])
+                                ? LinearGradient(colors: [cardBg, cardBg])
                                 : ImagoColors.violetGradient,
                             borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4F46E5).withOpacity(0.25),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (isSimplifying)
-                                SizedBox(
+                                const SizedBox(
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
@@ -502,11 +594,11 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                                   ),
                                 )
                               else
-                                Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
+                                const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
                               Text(
                                 isSimplifying ? 'Simplifying...' : 'Explain it Simply',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontFamily: 'Poppins',
                                   color: Colors.white,
                                   fontSize: 14,
@@ -517,7 +609,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                           ),
                         ),
                       ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -534,9 +626,17 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
     if (!mounted) return;
 
+    final isDark = ImagoColors.isDark;
+    final modalBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final border = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final accentGold = isDark ? const Color(0xFFFFC857) : const Color(0xFFD97706);
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: modalBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -554,7 +654,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                     rawRef.trim(),
                     style: TextStyle(
                       fontFamily: 'Cinzel',
-                      color: ImagoColors.gold,
+                      color: accentGold,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -562,14 +662,15 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: cardBg,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: border),
                     ),
                     child: Text(
                       BibleService.instance.currentTranslation,
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: Colors.white.withOpacity(0.7),
+                        color: textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -577,13 +678,13 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               if (verses.isEmpty)
                 Text(
                   'Verse text not found in local database.',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.white.withOpacity(0.5),
+                    color: textSecondary,
                     fontStyle: FontStyle.italic,
                   ),
                 )
@@ -596,14 +697,14 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                       '${v.verse}. ${v.text}',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: Colors.white.withOpacity(0.9),
+                        color: textPrimary,
                         fontSize: 14.5,
                         height: 1.6,
                       ),
                     ),
                   )).toList(),
                 ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -616,7 +717,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('$rawRef copied!'),
-                              backgroundColor: ImagoColors.nebula,
+                              backgroundColor: const Color(0xFF4F46E5),
                             ),
                           );
                         }
@@ -624,21 +725,21 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
+                          color: cardBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          border: Border.all(color: border),
                         ),
                         child: Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.copy_rounded, color: ImagoColors.gold, size: 16),
-                              SizedBox(width: 6),
+                              Icon(Icons.copy_rounded, color: accentGold, size: 16),
+                              const SizedBox(width: 6),
                               Text(
                                 'Copy Verse',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
-                                  color: Colors.white,
+                                  color: textPrimary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -651,7 +752,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
             ],
           ),
         );

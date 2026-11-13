@@ -8,27 +8,33 @@ class CrossrefSheet extends StatefulWidget {
   final BibleVerse sourceVerse;
   final Function(int book, int chapter, int verse)? onJumpToVerse;
 
+  final ReaderTheme? readerTheme;
+
   const CrossrefSheet({
     super.key,
     required this.sourceVerse,
     this.onJumpToVerse,
+    this.readerTheme,
   });
 
   static Future<void> show({
     required BuildContext context,
     required BibleVerse sourceVerse,
     Function(int book, int chapter, int verse)? onJumpToVerse,
+    ReaderTheme? readerTheme,
   }) {
+    final theme = readerTheme ?? ReaderTheme.current;
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => CrossrefSheet(
         sourceVerse: sourceVerse,
         onJumpToVerse: onJumpToVerse,
+        readerTheme: theme,
       ),
     );
   }
@@ -74,6 +80,14 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = widget.readerTheme ?? ReaderTheme.current;
+    final isDark = theme.isDark;
+    final textPrimary = theme.primaryText;
+    final textSecondary = theme.secondaryText;
+    final accent = theme.accentColor;
+    final cardBg = isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC);
+    final borderColor = theme.borderColor;
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.82,
@@ -94,18 +108,18 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                       'TSK Cross References',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: ImagoColors.gold,
+                        color: isDark ? ImagoColors.gold : accent,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       widget.sourceVerse.reference,
                       style: TextStyle(
                         fontFamily: 'Cinzel',
-                        color: Colors.white,
+                        color: textPrimary,
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
@@ -118,19 +132,20 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: borderColor),
                   ),
-                  child: Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                  child: Icon(Icons.close_rounded, color: textPrimary, size: 18),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           if (_loading)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator(color: ImagoColors.gold)),
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator(color: accent)),
             )
           else if (_targetRefs.isEmpty)
             Padding(
@@ -140,7 +155,7 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                   'No cross references found for this verse.',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.white.withOpacity(0.5),
+                    color: textSecondary.withOpacity(0.7),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -159,9 +174,9 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: cardBg,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +188,7 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                               ref,
                               style: TextStyle(
                                 fontFamily: 'Cinzel',
-                                color: ImagoColors.gold,
+                                color: isDark ? ImagoColors.gold : accent,
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -189,9 +204,9 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
-                                    gradient: ImagoColors.violetGradient,
+                                    color: accent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
@@ -206,15 +221,15 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.north_east_rounded, color: Colors.white, size: 12),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.north_east_rounded, color: Colors.white, size: 12),
                                     ],
                                   ),
                                 ),
                               ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         if (verses == null)
                           FutureBuilder<List<BibleVerse>>(
                             future: BibleService.instance.getVerseByReference(ref),
@@ -228,7 +243,7 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                                       width: 12,
                                       height: 12,
                                       child: CircularProgressIndicator(
-                                        color: ImagoColors.gold.withOpacity(0.5),
+                                        color: accent.withOpacity(0.5),
                                         strokeWidth: 1.5,
                                       ),
                                     ),
@@ -241,17 +256,17 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
                                   'Verse text unavailable',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
-                                    color: Colors.white.withOpacity(0.4),
+                                    color: textSecondary.withOpacity(0.6),
                                     fontSize: 13,
                                     fontStyle: FontStyle.italic,
                                   ),
                                 );
                               }
-                              return _buildVerseText(list);
+                              return _buildVerseText(list, textPrimary);
                             },
                           )
                         else
-                          _buildVerseText(verses),
+                          _buildVerseText(verses, textPrimary),
                       ],
                     ),
                   );
@@ -263,13 +278,13 @@ class _CrossrefSheetState extends State<CrossrefSheet> {
     );
   }
 
-  Widget _buildVerseText(List<BibleVerse> verses) {
+  Widget _buildVerseText(List<BibleVerse> verses, Color textColor) {
     final fullText = verses.map((v) => '${v.verse}. ${v.text}').join(' ');
     return SelectableText(
       fullText,
       style: TextStyle(
         fontFamily: 'Poppins',
-        color: Colors.white.withOpacity(0.85),
+        color: textColor,
         fontSize: 13.5,
         height: 1.5,
       ),

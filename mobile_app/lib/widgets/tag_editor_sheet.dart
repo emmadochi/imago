@@ -10,27 +10,33 @@ class TagEditorSheet extends StatefulWidget {
   final BibleVerse verse;
   final VoidCallback onTagsUpdated;
 
+  final ReaderTheme? readerTheme;
+
   const TagEditorSheet({
     super.key,
     required this.verse,
     required this.onTagsUpdated,
+    this.readerTheme,
   });
 
   static void show(
     BuildContext context, {
     required BibleVerse verse,
     required VoidCallback onTagsUpdated,
+    ReaderTheme? readerTheme,
   }) {
+    final theme = readerTheme ?? ReaderTheme.current;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0E0B24),
+      backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => TagEditorSheet(
         verse: verse,
         onTagsUpdated: onTagsUpdated,
+        readerTheme: theme,
       ),
     );
   }
@@ -98,6 +104,14 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = widget.readerTheme ?? ReaderTheme.current;
+    final isDark = theme.isDark;
+    final textPrimary = theme.primaryText;
+    final textSecondary = theme.secondaryText;
+    final accent = theme.accentColor;
+    final containerBg = isDark ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC);
+    final borderColor = theme.borderColor;
+
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -119,7 +133,7 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                     'Verse Tags',
                     style: TextStyle(
                       fontFamily: 'Cinzel',
-                      color: ImagoColors.gold,
+                      color: accent,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -128,29 +142,29 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                     widget.verse.reference,
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Colors.white.withOpacity(0.6),
+                      color: textSecondary,
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
               IconButton(
-                icon: Icon(Icons.close_rounded, color: Colors.white54),
+                icon: Icon(Icons.close_rounded, color: textSecondary),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           
           // Current tags wrap
           if (_isLoading)
-            Center(child: CircularProgressIndicator(color: ImagoColors.gold))
+            Center(child: CircularProgressIndicator(color: accent))
           else if (_currentTags.isEmpty)
             Text(
               'No tags yet. Add one below (e.g. faith, marriage).',
               style: TextStyle(
                 fontFamily: 'Poppins',
-                color: Colors.white.withOpacity(0.4),
+                color: textSecondary.withOpacity(0.6),
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
               ),
@@ -165,20 +179,21 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                     '#${tagObj.tag}',
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Colors.white,
+                      color: isDark ? Colors.white : const Color(0xFF312E81),
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  backgroundColor: ImagoColors.gold.withOpacity(0.2),
-                  side: BorderSide(color: ImagoColors.gold.withOpacity(0.5)),
-                  deleteIcon: Icon(Icons.close_rounded, size: 16, color: Colors.white70),
+                  backgroundColor: isDark ? ImagoColors.gold.withOpacity(0.2) : const Color(0xFFEEF2FF),
+                  side: BorderSide(color: isDark ? ImagoColors.gold.withOpacity(0.5) : const Color(0xFFC7D2FE)),
+                  deleteIcon: Icon(Icons.close_rounded, size: 16, color: isDark ? Colors.white70 : const Color(0xFF4F46E5)),
                   onDeleted: () => _removeTag(tagObj.tag),
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                 );
               }).toList(),
             ),
             
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           
           // Input row
           Row(
@@ -187,28 +202,28 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
+                    color: containerBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(color: borderColor),
                   ),
                   child: TextField(
                     controller: _controller,
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Colors.white,
+                      color: textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Add a tag...',
                       hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
+                        color: textSecondary.withOpacity(0.6),
                         fontFamily: 'Poppins',
                       ),
                       border: InputBorder.none,
                       prefixText: '#',
                       prefixStyle: TextStyle(
                         fontFamily: 'Poppins',
-                        color: ImagoColors.gold,
+                        color: accent,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -216,16 +231,19 @@ class _TagEditorSheetState extends State<TagEditorSheet> {
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               GestureDetector(
                 onTap: _addTag,
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    gradient: ImagoColors.goldGradient,
+                    color: accent,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(Icons.add_rounded, color: Colors.black87),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: isDark ? (accent == ImagoColors.gold ? Colors.black87 : Colors.white) : Colors.white,
+                  ),
                 ),
               ),
             ],

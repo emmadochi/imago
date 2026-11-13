@@ -390,3 +390,85 @@ if (podcastSyncBtn) {
         }
     });
 }
+
+// ── USER FEEDBACK & VALIDATION TAB LOGIC ──────────────────
+async function fetchFeedback() {
+    const container = document.getElementById('feedback-items-container');
+    const statAvgRating = document.getElementById('stat-avg-rating');
+    const statTotalFeedback = document.getElementById('stat-total-feedback');
+    const statMicroRatio = document.getElementById('stat-micro-ratio');
+
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/admin/feedback');
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            if (statAvgRating) statAvgRating.textContent = `${data.average_rating || 5.0} ★`;
+            if (statTotalFeedback) statTotalFeedback.textContent = data.total_feedback || 0;
+
+            const pos = data.micro_positive || 0;
+            const neg = data.micro_negative || 0;
+            const totalMicro = pos + neg;
+            const ratio = totalMicro > 0 ? Math.round((pos / totalMicro) * 100) : 100;
+            if (statMicroRatio) statMicroRatio.textContent = `${ratio}%`;
+
+            const items = data.feedback_items || [];
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2.5rem; color: #94A3B8;">
+                        <p style="font-size: 1.5rem; margin-bottom: 0.5rem;">💌</p>
+                        <p style="font-weight: 500;">No user feedback submitted yet.</p>
+                        <p style="font-size: 0.85rem;">Feedback submitted from mobile and desktop builds will stream here in real time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(fb => {
+                const stars = '★'.repeat(fb.rating || 5) + '☆'.repeat(Math.max(0, 5 - (fb.rating || 5)));
+                const dateStr = fb.timestamp ? new Date(fb.timestamp).toLocaleString() : 'Recent';
+                const userTag = fb.user_name || fb.email || 'Anonymous Believer';
+                const catTag = fb.category_label || fb.category || 'General';
+
+                return `
+                    <div class="glass-panel" style="padding: 1.1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <div>
+                                <span style="color: #FFC857; font-size: 1.1rem; letter-spacing: 2px;">${stars}</span>
+                                <span style="display: inline-block; margin-left: 0.75rem; background: rgba(79, 70, 229, 0.2); color: #818CF8; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                                    ${catTag}
+                                </span>
+                                <span style="display: inline-block; margin-left: 0.4rem; background: rgba(255,255,255,0.06); color: #94A3B8; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem;">
+                                    ${fb.platform || 'app'} • ${fb.screen_context || 'general'}
+                                </span>
+                            </div>
+                            <span style="font-size: 0.75rem; color: #64748B;">${dateStr}</span>
+                        </div>
+                        <p style="margin: 0.4rem 0 0.6rem 0; font-size: 0.95rem; line-height: 1.45; color: #E2E8F0;">
+                            "${fb.message || ''}"
+                        </p>
+                        <div style="font-size: 0.78rem; color: #94A3B8; display: flex; gap: 0.8rem;">
+                            <span>👤 ${userTag}</span>
+                            ${fb.email ? `<span>✉️ <a href="mailto:${fb.email}" style="color: #818CF8; text-decoration: none;">${fb.email}</a></span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    } catch (e) {
+        console.error('Error fetching feedback:', e);
+        if (container) {
+            container.innerHTML = '<p class="error-msg">Failed to load feedback feed.</p>';
+        }
+    }
+}
+
+const refreshFeedbackBtn = document.getElementById('refresh-feedback-btn');
+if (refreshFeedbackBtn) {
+    refreshFeedbackBtn.addEventListener('click', fetchFeedback);
+}
+
+// Initial fetch on page load
+fetchFeedback();

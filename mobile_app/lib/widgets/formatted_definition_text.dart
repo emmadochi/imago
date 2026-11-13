@@ -25,16 +25,18 @@ class FormattedDefinitionText extends StatelessWidget {
     final defaultStyle = style ??
         TextStyle(
           fontFamily: 'Poppins',
-          color: Colors.white.withOpacity(0.9),
+          color: ImagoColors.primaryText,
           fontSize: 14.5,
           height: 1.6,
         );
 
+    final isDark = ImagoColors.isDark;
+    final linkColor = isDark ? ImagoColors.gold : const Color(0xFF2563EB);
     final linkStyle = defaultStyle.copyWith(
-      color: ImagoColors.gold,
+      color: linkColor,
       fontWeight: FontWeight.bold,
       decoration: TextDecoration.underline,
-      decorationColor: ImagoColors.gold.withOpacity(0.5),
+      decorationColor: linkColor.withOpacity(0.5),
     );
 
     final matches = _refRegExp.allMatches(text);

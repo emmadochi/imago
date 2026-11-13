@@ -1,0 +1,1259 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Imago Pastoral AI Backend API",
+    "description": "\n## Imago Pastoral AI & Church Management API\n\nInteractive OpenAPI / Swagger documentation for the **Imago** backend.\n\n### Key Capabilities:\n- 🕊️ **Pastoral AI Chat**: Context-aware spiritual counseling with RAG citations from church sermons using Google Gemini & Pinecone.\n- 📖 **Bible & Scripture**: Multi-lingual translations and verse explanations.\n- 🎙️ **Audio & Sermons**: Audio file processing, sermon transcriptions, and automated YouTube/Podcast ingestors.\n- 🙏 **Community Prayer Wall**: Live prayer requests with real-time intercessor counters.\n- 🌅 **Daily Devotionals**: Automated scripture reflections and prayers.\n- 📊 **Mood & Analytics**: Spiritual health and emotional wellbeing analytics.\n    ",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "Chat & AI"
+        ],
+        "summary": "Send chat message to Pastoral AI",
+        "operationId": "chat_endpoint_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bible/translate": {
+      "post": {
+        "tags": [
+          "Bible & Translations"
+        ],
+        "summary": "Translate Bible passage into target language",
+        "operationId": "translate_bible_chapter_api_bible_translate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BibleTranslateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/audio": {
+      "post": {
+        "tags": [
+          "Chat & AI"
+        ],
+        "summary": "Send voice/audio message for AI response",
+        "operationId": "chat_audio_endpoint_api_chat_audio_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_chat_audio_endpoint_api_chat_audio_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhook/whatsapp": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Twilio WhatsApp incoming webhook",
+        "description": "Twilio WhatsApp webhook endpoint.",
+        "operationId": "whatsapp_webhook_api_webhook_whatsapp_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_whatsapp_webhook_api_webhook_whatsapp_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sermons/upload": {
+      "post": {
+        "tags": [
+          "Sermons & RAG"
+        ],
+        "summary": "Upload sermon document (PDF, DOCX, TXT) to Pinecone",
+        "description": "Admin upload endpoint supporting PDF, Word, and TXT files for dynamic vector injection.",
+        "operationId": "upload_sermon_endpoint_api_sermons_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_sermon_endpoint_api_sermons_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sermons": {
+      "get": {
+        "tags": [
+          "Sermons & RAG"
+        ],
+        "summary": "List all indexed sermon documents",
+        "description": "Returns the list of tracked uploaded documents.",
+        "operationId": "list_sermons_endpoint_api_sermons_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sermons/{filename}": {
+      "delete": {
+        "tags": [
+          "Sermons & RAG"
+        ],
+        "summary": "Delete sermon document from index and storage",
+        "operationId": "delete_sermon_endpoint_api_sermons__filename__delete",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health check endpoint",
+        "description": "Health check endpoint for Render deployment.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prayer": {
+      "post": {
+        "tags": [
+          "Prayer & Community"
+        ],
+        "summary": "Generate personalized pastoral prayer",
+        "description": "Generates an intercessory prayer response using the RAG pipeline with a Prayer-specific system prompt.",
+        "operationId": "prayer_endpoint_api_prayer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrayerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrayerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community-prayer": {
+      "post": {
+        "tags": [
+          "Prayer & Community"
+        ],
+        "summary": "Post public community prayer request",
+        "operationId": "post_community_prayer_api_community_prayer_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityPrayerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Prayer & Community"
+        ],
+        "summary": "Get recent community prayer requests",
+        "operationId": "get_community_prayers_api_community_prayer_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community-prayer/{prayer_id}/pray": {
+      "post": {
+        "tags": [
+          "Prayer & Community"
+        ],
+        "summary": "Increment prayer count for a community prayer",
+        "operationId": "pray_for_community_item_api_community_prayer__prayer_id__pray_post",
+        "parameters": [
+          {
+            "name": "prayer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prayer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devotional/today": {
+      "get": {
+        "tags": [
+          "Devotionals"
+        ],
+        "summary": "Get today's daily devotional guide",
+        "operationId": "get_today_devotional_api_devotional_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/youtube": {
+      "post": {
+        "tags": [
+          "Admin & Ingestion"
+        ],
+        "summary": "Ingest sermon transcript from YouTube channel URL",
+        "operationId": "sync_youtube_channel_api_admin_youtube_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/podcast": {
+      "post": {
+        "tags": [
+          "Admin & Ingestion"
+        ],
+        "summary": "Ingest sermon podcasts from RSS feed",
+        "operationId": "sync_podcast_feed_api_admin_podcast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PodcastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/mood": {
+      "post": {
+        "tags": [
+          "Feedback & Analytics"
+        ],
+        "summary": "Log user spiritual mood / emotional state",
+        "operationId": "log_mood_api_analytics_mood_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics": {
+      "get": {
+        "tags": [
+          "Admin & Ingestion"
+        ],
+        "summary": "Get admin dashboard analytics and metrics",
+        "operationId": "get_analytics_api_admin_analytics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "tags": [
+          "Feedback & Analytics"
+        ],
+        "summary": "Submit detailed user feedback",
+        "operationId": "receive_user_feedback_api_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/micro": {
+      "post": {
+        "tags": [
+          "Feedback & Analytics"
+        ],
+        "summary": "Submit micro-feedback survey response",
+        "operationId": "receive_micro_feedback_api_feedback_micro_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MicroFeedbackPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "tags": [
+          "Feedback & Analytics"
+        ],
+        "summary": "Retrieve all submitted user feedback",
+        "operationId": "get_admin_feedback_api_admin_feedback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BibleTranslateRequest": {
+        "properties": {
+          "book": {
+            "type": "string",
+            "title": "Book"
+          },
+          "chapter": {
+            "type": "integer",
+            "title": "Chapter"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "verses": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Verses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "book",
+          "chapter",
+          "language",
+          "verses"
+        ],
+        "title": "BibleTranslateRequest"
+      },
+      "Body_chat_audio_endpoint_api_chat_audio_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "mood": {
+            "type": "string",
+            "title": "Mood",
+            "default": "Neutral"
+          },
+          "history": {
+            "type": "string",
+            "title": "History",
+            "default": "[]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_chat_audio_endpoint_api_chat_audio_post"
+      },
+      "Body_upload_sermon_endpoint_api_sermons_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_sermon_endpoint_api_sermons_upload_post"
+      },
+      "Body_whatsapp_webhook_api_webhook_whatsapp_post": {
+        "properties": {
+          "Body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "From": {
+            "type": "string",
+            "title": "From"
+          }
+        },
+        "type": "object",
+        "required": [
+          "Body",
+          "From"
+        ],
+        "title": "Body_whatsapp_webhook_api_webhook_whatsapp_post"
+      },
+      "ChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "mood": {
+            "type": "string",
+            "title": "Mood",
+            "default": "Neutral"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "English"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest"
+      },
+      "ChatResponse": {
+        "properties": {
+          "response": {
+            "type": "string",
+            "title": "Response"
+          },
+          "crisis_triggered": {
+            "type": "boolean",
+            "title": "Crisis Triggered"
+          },
+          "sources": {
+            "items": {},
+            "type": "array",
+            "title": "Sources"
+          },
+          "sermon_recommendation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sermon Recommendation"
+          },
+          "handoff_required": {
+            "type": "boolean",
+            "title": "Handoff Required",
+            "default": false
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          }
+        },
+        "type": "object",
+        "required": [
+          "response",
+          "crisis_triggered",
+          "sources"
+        ],
+        "title": "ChatResponse"
+      },
+      "CommunityPrayerRequest": {
+        "properties": {
+          "request": {
+            "type": "string",
+            "title": "Request"
+          },
+          "is_anonymous": {
+            "type": "boolean",
+            "title": "Is Anonymous",
+            "default": true
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name",
+            "default": "Anonymous"
+          },
+          "uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "title": "CommunityPrayerRequest"
+      },
+      "FeedbackPayload": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Label"
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Name"
+          },
+          "screen_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Context",
+            "default": "general"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform",
+            "default": "unknown"
+          },
+          "app_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version",
+            "default": "1.0.0"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "rating",
+          "message"
+        ],
+        "title": "FeedbackPayload"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MicroFeedbackPayload": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "context_id": {
+            "type": "string",
+            "title": "Context Id"
+          },
+          "is_positive": {
+            "type": "boolean",
+            "title": "Is Positive"
+          },
+          "screen_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Context",
+            "default": "chat"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "context_id",
+          "is_positive"
+        ],
+        "title": "MicroFeedbackPayload"
+      },
+      "MoodRequest": {
+        "properties": {
+          "mood": {
+            "type": "string",
+            "title": "Mood"
+          },
+          "intensity": {
+            "type": "number",
+            "title": "Intensity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mood",
+          "intensity"
+        ],
+        "title": "MoodRequest"
+      },
+      "PodcastRequest": {
+        "properties": {
+          "rss_url": {
+            "type": "string",
+            "title": "Rss Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rss_url"
+        ],
+        "title": "PodcastRequest"
+      },
+      "PrayerRequest": {
+        "properties": {
+          "request": {
+            "type": "string",
+            "title": "Request"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "title": "PrayerRequest"
+      },
+      "PrayerResponse": {
+        "properties": {
+          "prayer": {
+            "type": "string",
+            "title": "Prayer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prayer"
+        ],
+        "title": "PrayerResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "YouTubeRequest": {
+        "properties": {
+          "channel_url": {
+            "type": "string",
+            "title": "Channel Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel_url"
+        ],
+        "title": "YouTubeRequest"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Chat & AI",
+      "description": "Conversational spiritual counseling, pastoral guidance powered by Google Gemini, audio transcription, and real-time WebSockets."
+    },
+    {
+      "name": "Bible & Translations",
+      "description": "Scripture translation and multi-lingual Bible passage generation."
+    },
+    {
+      "name": "Sermons & RAG",
+      "description": "Sermon document ingestion (PDF/DOCX/TXT), Pinecone vector embedding retrieval, and sermon library."
+    },
+    {
+      "name": "Prayer & Community",
+      "description": "Personalized prayer generation and public community prayer requests with intercessory prayer counters."
+    },
+    {
+      "name": "Devotionals",
+      "description": "Daily devotional guides with Scripture readings, reflections, and prayers."
+    },
+    {
+      "name": "Admin & Ingestion",
+      "description": "Automated ingestion pipelines for YouTube sermons and audio podcasts, plus live admin dashboard metrics."
+    },
+    {
+      "name": "Feedback & Analytics",
+      "description": "User experience feedback, mood analytics, and sentiment tracking."
+    },
+    {
+      "name": "System",
+      "description": "System health checks and third-party webhook integrations."
+    }
+  ]
+}

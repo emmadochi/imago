@@ -1,0 +1,26 @@
+[
+    {
+        "reference": "yoetz_1794585547_c0d989",
+        "email": "beloved@example.com",
+        "user_id": null,
+        "amount": 10000,
+        "currency": "NGN",
+        "tier": "Sustaining Partner",
+        "frequency": "monthly",
+        "status": "pending",
+        "gateway": "paystack",
+        "created_at": "2026-11-13T15:59:07.180038+00:00",
+        "paid_at": null
+    },
+    {
+        "reference": "yoetz_test_12345",
+        "email": "testpartner@example.com",
+        "user_id": "usr_999",
+        "amount": 5000,
+        "currency": "NGN",
+        "tier": "Ministry Partner",
+        "frequency": "monthly",
+        "status": "pending",
+        "gateway": "paystack"
+    }
+]

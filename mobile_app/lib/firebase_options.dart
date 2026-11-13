@@ -17,15 +17,12 @@ class DefaultFirebaseOptions {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
+      case TargetPlatform.windows:
+        return windows;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for iOS yet. '
-          'Download GoogleService-Info.plist from Firebase console and run: flutterfire configure',
-        );
+        return ios;
       default:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
-        );
+        return windows;
     }
   }
 
@@ -36,5 +33,23 @@ class DefaultFirebaseOptions {
     messagingSenderId: '214014462007',
     projectId: 'imago-bbd56',
     storageBucket: 'imago-bbd56.firebasestorage.app',
+  );
+
+  // Windows & Desktop config
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBIuZIVFYj5_9WPCDLeAjtrRxUs8LdnKfM',
+    appId: '1:214014462007:web:de6dabd73f9614682c97b2',
+    messagingSenderId: '214014462007',
+    projectId: 'imago-bbd56',
+    storageBucket: 'imago-bbd56.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBIuZIVFYj5_9WPCDLeAjtrRxUs8LdnKfM',
+    appId: '1:214014462007:ios:de6dabd73f9614682c97b2',
+    messagingSenderId: '214014462007',
+    projectId: 'imago-bbd56',
+    storageBucket: 'imago-bbd56.firebasestorage.app',
+    iosBundleId: 'org.lifechangerstouch.imago',
   );
 }

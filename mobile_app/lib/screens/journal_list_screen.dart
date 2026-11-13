@@ -34,65 +34,132 @@ class _JournalListScreenState extends State<JournalListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF040510),
-      body: Stack(
-        children: [
-          const CosmicBackground(children: []),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAppBar(),
-                Expanded(
-                  child: _isLoading
-                      ? Center(child: CircularProgressIndicator(color: ImagoColors.gold))
-                      : _entries.isEmpty
-                          ? _buildEmptyState()
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(20),
-                              itemCount: _entries.length,
-                              itemBuilder: (ctx, i) => _buildJournalCard(_entries[i]),
-                            ),
+    return ListenableBuilder(
+      listenable: Listenable.merge([appThemeNotifier, readerThemeNotifier]),
+      builder: (context, _) {
+        final isDark = ImagoColors.isDark;
+        final bg = isDark ? const Color(0xFF0A0E1A) : const Color(0xFFF8FAFC);
+        final cardBg = isDark ? const Color(0xFF131D33) : Colors.white;
+        final border = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+        final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+        final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+        final accent = isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5);
+
+        return Scaffold(
+          backgroundColor: bg,
+          body: Stack(
+            children: [
+              if (isDark) const CosmicBackground(children: []),
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAppBar(isDark, cardBg, border, textPrimary),
+                    Expanded(
+                      child: _isLoading
+                          ? Center(child: CircularProgressIndicator(color: accent))
+                          : _entries.isEmpty
+                              ? _buildEmptyState(textPrimary, textSecondary)
+                              : Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 860),
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
+                                      itemCount: _entries.length,
+                                      itemBuilder: (ctx, i) => _buildJournalCard(
+                                        _entries[i],
+                                        isDark,
+                                        cardBg,
+                                        border,
+                                        textPrimary,
+                                        textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: const Color(0xFF4F46E5),
+            elevation: 4,
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const JournalEditorScreen()),
+              );
+              if (result == true) {
+                _loadEntries();
+              }
+            },
+            icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+            label: const Text(
+              'New Entry',
+              style: TextStyle(fontFamily: 'Poppins', color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppBar(bool isDark, Color cardBg, Color border, Color textPrimary) {
+    final canPop = Navigator.canPop(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border(bottom: BorderSide(color: border)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
-            ),
-          ),
-        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF3D5AFE),
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const JournalEditorScreen()),
-          );
-          if (result == true) {
-            _loadEntries();
-          }
-        },
-        child: Icon(Icons.edit_rounded, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
-            onPressed: () => Navigator.of(context).pop(),
+          if (canPop) ...[
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: border),
+                ),
+                child: Icon(Icons.arrow_back_ios_rounded, color: textPrimary, size: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF4F46E5).withOpacity(0.2) : const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.edit_note_rounded,
+              color: isDark ? const Color(0xFFFFC857) : const Color(0xFF4F46E5),
+              size: 20,
+            ),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 12),
           Text(
-            'Journal & Notes',
+            'Journal & Reflections',
             style: TextStyle(
               fontFamily: 'Cinzel',
-              fontSize: 20,
+              fontSize: 19,
               fontWeight: FontWeight.w700,
-              color: ImagoColors.cream,
+              color: textPrimary,
             ),
           ),
         ],
@@ -100,30 +167,31 @@ class _JournalListScreenState extends State<JournalListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color textPrimary, Color textSecondary) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.menu_book_rounded, color: Colors.white.withOpacity(0.2), size: 60),
-          SizedBox(height: 16),
+          Icon(Icons.menu_book_rounded, color: textSecondary.withOpacity(0.35), size: 64),
+          const SizedBox(height: 16),
           Text(
             'Your journal is empty',
             style: TextStyle(
               fontFamily: 'Cinzel',
-              color: Colors.white.withOpacity(0.8),
+              color: textPrimary,
               fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Write down your reflections, sermon notes, '
-            'and spiritual journey.',
+            'Write down your reflections, sermon notes, \nand spiritual journey.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
-              color: Colors.white.withOpacity(0.4),
+              color: textSecondary,
               fontSize: 13,
+              height: 1.5,
             ),
           ),
         ],
@@ -131,7 +199,14 @@ class _JournalListScreenState extends State<JournalListScreen> {
     );
   }
 
-  Widget _buildJournalCard(JournalEntry entry) {
+  Widget _buildJournalCard(
+    JournalEntry entry,
+    bool isDark,
+    Color cardBg,
+    Color border,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     // Attempt to extract plain text from Quill JSON for preview
     String previewText = 'No content';
     try {
@@ -151,12 +226,21 @@ class _JournalListScreenState extends State<JournalListScreen> {
         }
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: border),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,10 +250,10 @@ class _JournalListScreenState extends State<JournalListScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    entry.title.isEmpty ? 'Untitled' : entry.title,
+                    entry.title.isEmpty ? 'Untitled Reflection' : entry.title,
                     style: TextStyle(
                       fontFamily: 'Cinzel',
-                      color: ImagoColors.gold,
+                      color: textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -179,41 +263,48 @@ class _JournalListScreenState extends State<JournalListScreen> {
                   DateFormat('MMM d, yyyy').format(entry.updatedAt),
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Colors.white.withOpacity(0.4),
-                    fontSize: 11,
+                    color: textSecondary,
+                    fontSize: 11.5,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               previewText,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Poppins',
-                color: Colors.white.withOpacity(0.7),
+                color: textSecondary,
                 fontSize: 13,
                 height: 1.5,
               ),
             ),
             if (entry.tags.isNotEmpty) ...[
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 6,
+                runSpacing: 6,
                 children: entry.tags.map((tag) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF5C6BC0).withOpacity(0.15),
+                    color: isDark
+                        ? const Color(0xFF4F46E5).withOpacity(0.18)
+                        : const Color(0xFFEEF2FF),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF5C6BC0).withOpacity(0.3)),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF4F46E5).withOpacity(0.4)
+                          : const Color(0xFFC7D2FE),
+                    ),
                   ),
                   child: Text(
                     tag,
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Color(0xFF5C6BC0),
-                      fontSize: 10,
+                      color: isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5),
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

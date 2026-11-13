@@ -1,4 +1,5 @@
 // lib/screens/reading_plans_screen.dart
+// Reading plans catalog screen with responsive category tabs and light/dark theme support.
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class ReadingPlansScreen extends StatefulWidget {
 }
 
 class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
-  String _selectedCategory = 'All'; // 'All', '30-Day', '90-Day', '1-Year'
+  String _selectedCategory = 'All'; // 'All', '9-Day', '30-Day', '90-Day', '1-Year'
   Map<String, ReadingPlanProgress> _progressMap = {};
   bool _loading = true;
 
@@ -43,57 +44,98 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF040510),
-      body: Stack(
-        children: [
-          const CosmicBackground(children: []),
-          Positioned(
-            top: -40,
-            left: -40,
-            child: CosmicOrb(size: 260, color: const Color(0xFF3D5AFE), opacity: 0.07),
-          ),
-          SafeArea(
+    return ListenableBuilder(
+      listenable: Listenable.merge([appThemeNotifier, readerThemeNotifier]),
+      builder: (context, _) {
+        final isDark = ImagoColors.isDark;
+        final bg = isDark ? const Color(0xFF0A0E1A) : const Color(0xFFF8FAFC);
+        final cardBg = isDark ? const Color(0xFF131D33) : Colors.white;
+        final borderColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+        final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+        final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+
+        return Scaffold(
+          backgroundColor: bg,
+          body: SafeArea(
             child: Column(
               children: [
-                _buildHeader(),
-                _buildCategoryFilter(),
+                _buildHeader(isDark, borderColor, textPrimary, textSecondary),
+                _buildCategoryFilter(isDark, borderColor, textPrimary, textSecondary),
                 Expanded(
                   child: _loading
-                      ? Center(child: CircularProgressIndicator(color: ImagoColors.gold))
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5)))
                       : SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildActivePlanHeader(),
-                              const SizedBox(height: 24),
-                              Text(
-                                'EXPLORE BIBLE TRACKS',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: ImagoColors.gold.withOpacity(0.8),
-                                  fontSize: 11,
-                                  letterSpacing: 2.0,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 860),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildActivePlanHeader(isDark, cardBg, borderColor, textPrimary, textSecondary),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'EXPLORE BIBLE TRACKS',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      color: const Color(0xFF4F46E5),
+                                      fontSize: 11.5,
+                                      letterSpacing: 1.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: _filteredPlans.length,
+                                    itemBuilder: (context, index) {
+                                      final plan = _filteredPlans[index];
+                                      final prog = _progressMap[plan.id];
+                                      return _buildPlanCard(plan, prog, isDark, cardBg, borderColor, textPrimary, textSecondary);
+                                    },
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _filteredPlans.length,
-                                itemBuilder: (context, index) {
-                                  final plan = _filteredPlans[index];
-                                  final prog = _progressMap[plan.id];
-                                  return _buildPlanCard(plan, prog);
-                                },
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(bool isDark, Color borderColor, Color textPrimary, Color textSecondary) {
+    final canPop = Navigator.canPop(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        border: Border(bottom: BorderSide(color: borderColor)),
+      ),
+      child: Row(
+        children: [
+          if (canPop) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded, size: 16),
+              color: textSecondary,
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text(
+              'Reading Plans & Devotionals',
+              style: TextStyle(
+                fontFamily: 'Cinzel',
+                color: isDark ? const Color(0xFFFFC857) : const Color(0xFF0F172A),
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -101,59 +143,17 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.06))),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 16),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Reading Plans & Devotionals',
-                  style: TextStyle(
-                    fontFamily: 'Cinzel',
-                    color: ImagoColors.cream,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilter() {
-    final categories = ['All', '30-Day', '90-Day', '1-Year'];
+  Widget _buildCategoryFilter(bool isDark, Color borderColor, Color textPrimary, Color textSecondary) {
+    final categories = ['All', '9-Day', '30-Day', '90-Day', '1-Year'];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           children: categories.map((cat) {
@@ -162,18 +162,18 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
               child: GestureDetector(
                 onTap: () => setState(() => _selectedCategory = cat),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    gradient: isSelected ? ImagoColors.violetGradient : null,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected ? const Color(0xFF4F46E5) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     cat,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                      color: isSelected ? Colors.white : textSecondary,
                       fontSize: 12,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     ),
@@ -187,8 +187,7 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
     );
   }
 
-  Widget _buildActivePlanHeader() {
-    // Find the most recently read plan
+  Widget _buildActivePlanHeader(bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     if (_progressMap.isEmpty) return const SizedBox.shrink();
 
     final activeEntries = _progressMap.entries.toList()
@@ -212,18 +211,14 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF3D5AFE).withOpacity(0.2),
-              const Color(0xFF1B1147).withOpacity(0.4),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: ImagoColors.gold.withOpacity(0.4)),
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF4F46E5).withOpacity(0.35)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF3D5AFE).withOpacity(0.2),
-              blurRadius: 20,
+              color: const Color(0xFF4F46E5).withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -231,8 +226,8 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
           children: [
             ReadingProgressRing(
               progress: pct,
-              size: 80,
-              strokeWidth: 7,
+              size: 72,
+              strokeWidth: 6,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -242,17 +237,17 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: ImagoColors.gold.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFF4F46E5).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
+                    child: const Text(
                       'ACTIVE TRACK',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: ImagoColors.gold,
+                        color: Color(0xFF4F46E5),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        letterSpacing: 1.0,
                       ),
                     ),
                   ),
@@ -261,7 +256,7 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
                     plan.title,
                     style: TextStyle(
                       fontFamily: 'Cinzel',
-                      color: ImagoColors.cream,
+                      color: textPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
@@ -271,110 +266,152 @@ class _ReadingPlansScreenState extends State<ReadingPlansScreen> {
                     '${prog.completedDays.length} of ${plan.durationDays} days completed',
                     style: TextStyle(
                       fontFamily: 'Poppins',
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 12,
+                      color: textSecondary,
+                      fontSize: 12.5,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.play_circle_fill_rounded, color: ImagoColors.gold, size: 36),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF4F46E5)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPlanCard(ReadingPlan plan, ReadingPlanProgress? prog) {
+  Widget _buildPlanCard(
+    ReadingPlan plan,
+    ReadingPlanProgress? prog,
+    bool isDark,
+    Color cardBg,
+    Color borderColor,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     final completedCount = prog?.completedDays.length ?? 0;
-    final pct = prog != null ? prog.getPercentageForDuration(plan.durationDays) : 0.0;
+    final totalDays = plan.durationDays;
+    final pct = (completedCount / totalDays).clamp(0.0, 1.0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ReadingPlanDetailScreen(plan: plan)),
-              ).then((_) => _loadAllProgress());
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  ReadingProgressRing(
-                    progress: pct,
-                    size: 64,
-                    strokeWidth: 6,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ReadingPlanDetailScreen(plan: plan)),
+            ).then((_) => _loadAllProgress());
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF3D5AFE).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${plan.durationDays} DAYS',
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Color(0xFF8C9EFF),
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                  child: const Icon(Icons.auto_stories_rounded, color: Color(0xFF4F46E5), size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4F46E5).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              plan.category,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4F46E5),
                               ),
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '•  ${plan.durationDays} Days',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        plan.title,
+                        style: TextStyle(
+                          fontFamily: 'Cinzel',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textPrimary,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          plan.title,
-                          style: TextStyle(
-                            fontFamily: 'Cinzel',
-                            color: ImagoColors.cream,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.subtitle,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: textSecondary,
+                        ),
+                      ),
+                      if (completedCount > 0) ...[
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: pct,
+                            backgroundColor: borderColor,
+                            valueColor: const AlwaysStoppedAnimation(Color(0xFF4F46E5)),
+                            minHeight: 5,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          plan.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          '$completedCount / $totalDays days completed',
                           style: TextStyle(
                             fontFamily: 'Poppins',
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 11.5,
-                            height: 1.4,
+                            fontSize: 11,
+                            color: const Color(0xFF4F46E5),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.white.withOpacity(0.3),
-                    size: 22,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF4F46E5)),
+              ],
             ),
           ),
         ),

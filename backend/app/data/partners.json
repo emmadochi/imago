@@ -1,0 +1,20 @@
+{
+    "testpartner@example.com": {
+        "email": "testpartner@example.com",
+        "user_id": "usr_999",
+        "partner_tier": "Ministry Partner",
+        "amount": 5000,
+        "reference": "yoetz_test_12345",
+        "is_partner": true,
+        "updated_at": "2026-11-13T15:59:07.128165+00:00"
+    },
+    "usr_999": {
+        "email": "testpartner@example.com",
+        "user_id": "usr_999",
+        "partner_tier": "Ministry Partner",
+        "amount": 5000,
+        "reference": "yoetz_test_12345",
+        "is_partner": true,
+        "updated_at": "2026-11-13T15:59:07.128165+00:00"
+    }
+}

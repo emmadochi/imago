@@ -1,7 +1,13 @@
 import os
 import io
+import time
+import urllib.request
+import urllib.error
+import hmac
+import hashlib
+import uuid
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Form, HTTPException, Response, UploadFile, File
+from fastapi import FastAPI, Form, HTTPException, Response, UploadFile, File, Request, Depends, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -13,6 +19,7 @@ import docx
 import json
 import datetime
 from pathlib import Path
+import edge_tts
 
 # Firebase Admin setup for Firestore Cloud Persistence
 firestore_db = None
@@ -36,6 +43,18 @@ try:
 except Exception as e:
     print(f"INFO:     Firestore offline, using local storage fallback: {e}")
 
+# Database & Connection Pooler Integration
+try:
+    from .database import check_db_health, get_db_session
+    from .models import User, PaymentTransaction
+except ImportError:
+    from database import check_db_health, get_db_session
+    try:
+        from models import User, PaymentTransaction
+    except ImportError:
+        User = None
+        PaymentTransaction = None
+
 # Setup Data Directory for document tracking
 DATA_DIR = Path("app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,6 +63,162 @@ YOUTUBE_CACHE_FILE = DATA_DIR / "youtube_cache.json"
 PODCAST_CACHE_FILE = DATA_DIR / "podcast_cache.json"
 ANALYTICS_FILE = DATA_DIR / "analytics.json"
 COMMUNITY_PRAYERS_FILE = DATA_DIR / "community_prayers.json"
+FEEDBACK_FILE = DATA_DIR / "feedback.json"
+MICRO_FEEDBACK_FILE = DATA_DIR / "micro_feedback.json"
+TRANSACTIONS_FILE = DATA_DIR / "transactions.json"
+PARTNERS_FILE = DATA_DIR / "partners.json"
+
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "").strip()
+
+def load_local_transactions() -> list:
+    if not TRANSACTIONS_FILE.exists():
+        return []
+    try:
+        with open(TRANSACTIONS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_local_transaction(item: dict):
+    items = load_local_transactions()
+    for idx, existing in enumerate(items):
+        if existing.get("reference") == item.get("reference"):
+            items[idx] = item
+            break
+    else:
+        items.insert(0, item)
+    try:
+        with open(TRANSACTIONS_FILE, "w") as f:
+            json.dump(items, f, indent=4)
+    except Exception:
+        pass
+
+def load_local_partners() -> dict:
+    if not PARTNERS_FILE.exists():
+        return {}
+    try:
+        with open(PARTNERS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_local_partner(key: str, data: dict):
+    if not key:
+        return
+    partners = load_local_partners()
+    partners[key.lower().strip()] = data
+    try:
+        with open(PARTNERS_FILE, "w") as f:
+            json.dump(partners, f, indent=4)
+    except Exception:
+        pass
+
+async def upgrade_user_partner_tier(
+    email: str,
+    tier: str,
+    user_id: Optional[str] = None,
+    amount: int = 0,
+    reference: Optional[str] = None,
+    db_session: Optional[Any] = None
+):
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    partner_record = {
+        "email": email,
+        "user_id": user_id,
+        "partner_tier": tier,
+        "amount": amount,
+        "reference": reference,
+        "is_partner": True,
+        "updated_at": now_iso
+    }
+    
+    # 1. Local storage fallback
+    if email:
+        save_local_partner(email, partner_record)
+    if user_id:
+        save_local_partner(user_id, partner_record)
+
+    # 2. Firebase Firestore persistence
+    if firestore_db:
+        try:
+            doc_id = user_id or email
+            if doc_id:
+                firestore_db.collection("users").document(doc_id).set({
+                    "partner_tier": tier,
+                    "is_partner": True,
+                    "email": email,
+                    "last_contribution_amount": amount,
+                    "last_payment_reference": reference,
+                    "updated_at": firestore.SERVER_TIMESTAMP,
+                }, merge=True)
+                print(f"INFO: Updated partner tier in Firestore for {doc_id} -> {tier}")
+        except Exception as e:
+            print(f"Warning: Firestore partner tier update error: {e}")
+
+    # 3. PostgreSQL database persistence
+    if db_session and User is not None:
+        try:
+            from sqlalchemy import select
+            query = None
+            if user_id:
+                query = select(User).where(User.id == user_id)
+            elif email:
+                query = select(User).where(User.email == email)
+            if query is not None:
+                res = await db_session.execute(query)
+                user_obj = res.scalar_one_or_none()
+                if user_obj:
+                    user_obj.partner_tier = tier
+                    await db_session.commit()
+                    print(f"INFO: Updated partner tier in PostgreSQL for {user_obj.email} -> {tier}")
+        except Exception as e:
+            print(f"Warning: PostgreSQL partner tier update error: {e}")
+
+
+def load_feedback() -> list:
+    if firestore_db:
+        try:
+            doc = firestore_db.collection("imago_meta").document("user_feedback").get()
+            if doc.exists:
+                return doc.to_dict().get("list", [])
+        except Exception as e:
+            print(f"Warning: Firestore load feedback error: {e}")
+    if not FEEDBACK_FILE.exists():
+        return []
+    try:
+        with open(FEEDBACK_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_feedback(items: list):
+    if firestore_db:
+        try:
+            firestore_db.collection("imago_meta").document("user_feedback").set({"list": items}, merge=True)
+        except Exception as e:
+            print(f"Warning: Firestore save feedback error: {e}")
+    try:
+        with open(FEEDBACK_FILE, "w") as f:
+            json.dump(items, f, indent=4)
+    except Exception:
+        pass
+
+def load_micro_feedback() -> list:
+    if not MICRO_FEEDBACK_FILE.exists():
+        return []
+    try:
+        with open(MICRO_FEEDBACK_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_micro_feedback(items: list):
+    try:
+        with open(MICRO_FEEDBACK_FILE, "w") as f:
+            json.dump(items, f, indent=4)
+    except Exception:
+        pass
 
 def load_community_prayers() -> list:
     if firestore_db:
@@ -131,24 +306,40 @@ def save_documents(docs: list):
     except Exception:
         pass
 
+_cached_youtube_videos = None
+_cached_youtube_timestamp = 0
+_cached_podcasts = None
+_cached_podcasts_timestamp = 0
+
 def load_youtube_videos() -> list:
+    global _cached_youtube_videos, _cached_youtube_timestamp
+    now = time.time()
+    if _cached_youtube_videos is not None and (now - _cached_youtube_timestamp < 600):
+        return _cached_youtube_videos
+
+    videos = []
     if firestore_db:
         try:
             doc = firestore_db.collection("imago_meta").document("youtube_cache").get()
             if doc.exists:
                 data = doc.to_dict()
-                return data.get("list", [])
+                videos = data.get("list", [])
         except Exception as e:
             print(f"Warning: Firestore load youtube error: {e}")
-    if not YOUTUBE_CACHE_FILE.exists():
-        return []
-    try:
-        with open(YOUTUBE_CACHE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return []
+    if not videos and YOUTUBE_CACHE_FILE.exists():
+        try:
+            with open(YOUTUBE_CACHE_FILE, "r") as f:
+                videos = json.load(f)
+        except Exception:
+            videos = []
+    _cached_youtube_videos = videos
+    _cached_youtube_timestamp = now
+    return videos
 
 def save_youtube_videos(videos: list):
+    global _cached_youtube_videos, _cached_youtube_timestamp
+    _cached_youtube_videos = videos
+    _cached_youtube_timestamp = time.time()
     if firestore_db:
         try:
             firestore_db.collection("imago_meta").document("youtube_cache").set({"list": videos}, merge=True)
@@ -161,23 +352,34 @@ def save_youtube_videos(videos: list):
         pass
 
 def load_podcasts() -> list:
+    global _cached_podcasts, _cached_podcasts_timestamp
+    now = time.time()
+    if _cached_podcasts is not None and (now - _cached_podcasts_timestamp < 600):
+        return _cached_podcasts
+
+    podcasts = []
     if firestore_db:
         try:
             doc = firestore_db.collection("imago_meta").document("podcast_cache").get()
             if doc.exists:
                 data = doc.to_dict()
-                return data.get("list", [])
+                podcasts = data.get("list", [])
         except Exception as e:
             print(f"Warning: Firestore load podcast error: {e}")
-    if not PODCAST_CACHE_FILE.exists():
-        return []
-    try:
-        with open(PODCAST_CACHE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return []
+    if not podcasts and PODCAST_CACHE_FILE.exists():
+        try:
+            with open(PODCAST_CACHE_FILE, "r") as f:
+                podcasts = json.load(f)
+        except Exception:
+            podcasts = []
+    _cached_podcasts = podcasts
+    _cached_podcasts_timestamp = now
+    return podcasts
 
 def save_podcasts(podcasts: list):
+    global _cached_podcasts, _cached_podcasts_timestamp
+    _cached_podcasts = podcasts
+    _cached_podcasts_timestamp = time.time()
     if firestore_db:
         try:
             firestore_db.collection("imago_meta").document("podcast_cache").set({"list": podcasts}, merge=True)
@@ -194,6 +396,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "pastoral-sermons")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Setup Gemini client
 client = None
@@ -208,7 +411,7 @@ else:
 
 def call_gemini_with_fallback(contents, config=None):
     """Resiliently executes Gemini generation with automatic fallback across supported model identifiers."""
-    models = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"]
+    models = ["gemini-2.5-flash", "gemini-3.6-flash", "gemini-flash-latest"]
     last_err = None
     for m in models:
         try:
@@ -221,6 +424,55 @@ def call_gemini_with_fallback(contents, config=None):
             last_err = e
             print(f"WARN: Gemini model '{m}' failed: {e}. Trying fallback...")
     raise last_err or RuntimeError("All Gemini generation models failed")
+
+def transcribe_audio_bytes(audio_bytes: bytes, mime: str = "audio/mp4") -> str:
+    """Fast transcription prioritizing Groq Whisper Turbo (<400ms) with Gemini multimodal fallback."""
+    if GROQ_API_KEY:
+        try:
+            boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+            body = (
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="model"\r\n\r\n'
+                f"whisper-large-v3-turbo\r\n"
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="temperature"\r\n\r\n'
+                f"0.0\r\n"
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="file"; filename="audio.m4a"\r\n'
+                f"Content-Type: audio/mp4\r\n\r\n"
+            ).encode("utf-8") + audio_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/audio/transcriptions",
+                data=body,
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                text = data.get("text", "").strip()
+                if text:
+                    return text
+        except Exception as ge:
+            print(f"WARN: Groq transcription failed, trying Gemini: {ge}")
+
+    # Fallback to Gemini
+    gen_config = genai_types.GenerateContentConfig(
+        max_output_tokens=300,
+        temperature=0.0,
+    ) if hasattr(genai_types, 'GenerateContentConfig') else None
+
+    transcript_response = call_gemini_with_fallback(
+        contents=[
+            genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime),
+            "Transcribe this audio verbatim. Output ONLY the transcribed words with zero additional commentary or chat."
+        ],
+        config=gen_config,
+    )
+    return transcript_response.text.strip() if transcript_response and transcript_response.text else ""
 
 def embed_content_with_fallback(text: str, task_type: str = "RETRIEVAL_QUERY"):
     """Resiliently executes Gemini text embedding with fallback models."""
@@ -249,7 +501,61 @@ if PINECONE_API_KEY:
 else:
     print("WARNING: PINECONE_API_KEY is not set in .env file.")
 
-app = FastAPI(title="Pastoral AI Assistant API", version="1.0.0")
+tags_metadata = [
+    {
+        "name": "Chat & AI",
+        "description": "Conversational spiritual counseling, pastoral guidance powered by Google Gemini, audio transcription, and real-time WebSockets.",
+    },
+    {
+        "name": "Bible & Translations",
+        "description": "Scripture translation and multi-lingual Bible passage generation.",
+    },
+    {
+        "name": "Sermons & RAG",
+        "description": "Sermon document ingestion (PDF/DOCX/TXT), Pinecone vector embedding retrieval, and sermon library.",
+    },
+    {
+        "name": "Prayer & Community",
+        "description": "Personalized prayer generation and public community prayer requests with intercessory prayer counters.",
+    },
+    {
+        "name": "Devotionals",
+        "description": "Daily devotional guides with Scripture readings, reflections, and prayers.",
+    },
+    {
+        "name": "Admin & Ingestion",
+        "description": "Automated ingestion pipelines for YouTube sermons and audio podcasts, plus live admin dashboard metrics.",
+    },
+    {
+        "name": "Feedback & Analytics",
+        "description": "User experience feedback, mood analytics, and sentiment tracking.",
+    },
+    {
+        "name": "System",
+        "description": "System health checks and third-party webhook integrations.",
+    },
+]
+
+app = FastAPI(
+    title="Imago Pastoral AI Backend API",
+    description="""
+## Imago Pastoral AI & Church Management API
+
+Interactive OpenAPI / Swagger documentation for the **Imago** backend.
+
+### Key Capabilities:
+- 🕊️ **Pastoral AI Chat**: Context-aware spiritual counseling with RAG citations from church sermons using Google Gemini & Pinecone.
+- 📖 **Bible & Scripture**: Multi-lingual translations and verse explanations.
+- 🎙️ **Audio & Sermons**: Audio file processing, sermon transcriptions, and automated YouTube/Podcast ingestors.
+- 🙏 **Community Prayer Wall**: Live prayer requests with real-time intercessor counters.
+- 🌅 **Daily Devotionals**: Automated scripture reflections and prayers.
+- 📊 **Mood & Analytics**: Spiritual health and emotional wellbeing analytics.
+    """,
+    version="1.0.0",
+    openapi_tags=tags_metadata,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
 # Mount Admin Dashboard
 app.mount("/admin", StaticFiles(directory="app/admin", html=True), name="admin")
@@ -385,44 +691,54 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
             "handoff_required": False
         }
 
-    try:
-        # 1. Embed query using Gemini
-        query_vector = embed_content_with_fallback(query, task_type="RETRIEVAL_QUERY")
-    except Exception as e:
-        print(f"ERROR: Embedding failed: {e}")
-        query_vector = None
-    
-    query_results = {}
-    if query_vector is not None and index is not None:
-        try:
-            # 2. Query Pinecone vector DB
-            query_results = index.query(
-                vector=query_vector,
-                top_k=3,
-                include_metadata=True
-            )
-        except Exception as e:
-            print(f"ERROR: Pinecone query failed: {e}")
-            query_results = {}
-    
-    # 3. Compile context & sources
+    # Fast-path for simple conversational greetings: skip embedding & vector search
+    clean_q = query.strip().lower().rstrip("!.? ")
+    is_simple_greeting = clean_q in [
+        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "how are you", "greetings", "hi there", "hello there", "peace", "praise god", "amen", "good day", "yoetz"
+    ]
+
     contexts = []
     sources = []
-    matches = query_results.get("matches", [])
-    highest_score = max([m.get("score", 0) for m in matches], default=0)
-    
-    for match in matches:
-        metadata = match.get("metadata", {})
-        text = metadata.get("text", "")
-        title = metadata.get("title", "Unknown Teaching")
-        if match.get("score", 0) > 0.1:
-            contexts.append(f"Source: {title}\nTeaching: {text}")
-            sources.append({"title": title, "score": match.get("score")})
-        
-    if not contexts or highest_score < 0.2:
-        unified_context = "No specific teachings found for this exact query. Rely on general pastoral wisdom, be highly interactive, and keep the conversation flowing naturally."
+    if is_simple_greeting:
+        unified_context = "The user is saying a brief, friendly greeting. Greet them warmly and pastorally, ask how their day or walk of faith is going, and gently invite them to share whatever is on their heart. Keep it natural, welcoming, and concise (1 to 3 sentences)."
     else:
-        unified_context = "\n\n---\n\n".join(contexts)
+        try:
+            # 1. Embed query using Gemini
+            query_vector = embed_content_with_fallback(query, task_type="RETRIEVAL_QUERY")
+        except Exception as e:
+            print(f"ERROR: Embedding failed: {e}")
+            query_vector = None
+        
+        query_results = {}
+        if query_vector is not None and index is not None:
+            try:
+                # 2. Query Pinecone vector DB
+                query_results = index.query(
+                    vector=query_vector,
+                    top_k=3,
+                    include_metadata=True
+                )
+            except Exception as e:
+                print(f"ERROR: Pinecone query failed: {e}")
+                query_results = {}
+        
+        # 3. Compile context & sources
+        matches = query_results.get("matches", [])
+        highest_score = max([m.get("score", 0) for m in matches], default=0)
+        
+        for match in matches:
+            metadata = match.get("metadata", {})
+            text = metadata.get("text", "")
+            title = metadata.get("title", "Unknown Teaching")
+            if match.get("score", 0) > 0.1:
+                contexts.append(f"Source: {title}\nTeaching: {text}")
+                sources.append({"title": title, "score": match.get("score")})
+            
+        if not contexts or highest_score < 0.2:
+            unified_context = "No specific teachings found for this exact query. Rely on general pastoral wisdom, be highly interactive, and keep the conversation flowing naturally."
+        else:
+            unified_context = "\n\n---\n\n".join(contexts)
     
     # Define mood-based counseling adjustments
     mood_directives = {
@@ -498,7 +814,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7,
-                max_output_tokens=8192,
+                max_output_tokens=300 if is_simple_greeting else 1200,
             )
         )
         return {
@@ -519,7 +835,7 @@ async def perform_rag_pipeline(query: str, mood: str, history: list = None, lang
             "handoff_required": False
         }
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, tags=["Chat & AI"], summary="Send chat message to Pastoral AI")
 async def chat_endpoint(request: ChatRequest):
     # Guardrail Check
     if is_crisis_detected(request.message):
@@ -582,7 +898,7 @@ def save_bible_cache(cache: dict):
     except Exception:
         pass
 
-@app.post("/api/bible/translate")
+@app.post("/api/bible/translate", tags=["Bible & Translations"], summary="Translate Bible passage into target language")
 async def translate_bible_chapter(body: BibleTranslateRequest):
     cache_key = f"{body.language}_{body.book}_{body.chapter}"
     cache = load_bible_cache()
@@ -620,36 +936,54 @@ async def translate_bible_chapter(body: BibleTranslateRequest):
         print(f"ERROR: Bible translation failed: {e}")
         return {"status": "fallback", "verses": body.verses}
 
-@app.post("/api/chat/audio", response_model=ChatResponse)
+# ─────────────────────────────────────────────────────────────────────────────
+# PROJECTOR LIVE LISTENER — Transcription Endpoint
+# Lean, purpose-built endpoint for the Scripture Projector's audio listener.
+# Unlike /api/chat/audio, this ONLY transcribes and returns the raw text.
+# No AI counseling pipeline, no history, no mood — just fast Gemini transcription
+# optimized for rapid 6-second audio chunk cycles in a live sanctuary setting.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/projector/transcribe", tags=["Scripture Projector"], summary="Transcribe projector audio chunk for live scripture detection")
+async def projector_transcribe_endpoint(file: UploadFile = File(...)):
+    if not GEMINI_API_KEY and not GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="Transcription service is not configured.")
+
+    try:
+        audio_bytes = await file.read()
+        if len(audio_bytes) < 1000:
+            return {"transcript": "", "message": "Audio chunk too short."}
+
+        mime = file.content_type
+        if not mime or mime == "application/octet-stream":
+            mime = "audio/mp4"  # Flutter record package outputs m4a
+
+        transcript = transcribe_audio_bytes(audio_bytes, mime)
+        return {"transcript": transcript}
+
+    except Exception as e:
+        print(f"ERROR: Projector transcription failed: {e}")
+        # Return empty transcript on error rather than raising — the client
+        # will simply skip this chunk and retry on the next cycle.
+        return {"transcript": "", "error": str(e)}
+
+@app.post("/api/chat/audio", response_model=ChatResponse, tags=["Chat & AI"], summary="Send voice/audio message for AI response")
 async def chat_audio_endpoint(
     file: UploadFile = File(...), 
     mood: str = Form("Neutral"),
     history: str = Form("[]")
 ):
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=503, detail="Gemini API is not configured.")
+    if not GEMINI_API_KEY and not GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="AI service is not configured.")
 
     try:
-        # Transcribe audio using Gemini
         audio_bytes = await file.read()
         # Handle Flutter's default 'application/octet-stream' fallback
         mime = file.content_type
         if not mime or mime == "application/octet-stream":
             mime = "audio/mp4"  # m4a format
 
-        transcript = ""
-        try:
-            transcript_response = call_gemini_with_fallback(
-                contents=[
-                    genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime),
-                    "Transcribe this audio accurately. Only output the transcription, no additional text."
-                ]
-            )
-            transcript = transcript_response.text.strip()
-        except Exception as e:
-            print(f"ERROR: Audio transcription failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Audio transcription failed: {str(e)}")
-
+        transcript = transcribe_audio_bytes(audio_bytes, mime)
         if not transcript:
             raise ValueError("Audio transcription returned empty result.")
 
@@ -686,6 +1020,49 @@ async def chat_audio_endpoint(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+class NaturalTtsRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "en-US-ChristopherNeural"
+    rate: Optional[str] = "+0%"
+    pitch: Optional[str] = "+0Hz"
+
+@app.post("/api/tts/natural", tags=["TTS & Audio"], summary="Generate studio-quality natural neural speech MP3")
+async def natural_tts_endpoint(body: NaturalTtsRequest):
+    clean_text = body.text.strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+    try:
+        voice = body.voice or "en-US-ChristopherNeural"
+        rate = body.rate or "+0%"
+        pitch = body.pitch or "+0Hz"
+        communicate = edge_tts.Communicate(clean_text, voice, rate=rate, pitch=pitch)
+        chunks = []
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                chunks.append(chunk["data"])
+        audio_bytes = b"".join(chunks)
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"ERROR: Natural TTS failed: {e}")
+        raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
+
+@app.get("/api/tts/stream", tags=["TTS & Audio"], summary="Stream studio-quality natural neural speech MP3")
+async def natural_tts_stream_endpoint(text: str, voice: Optional[str] = "en-US-ChristopherNeural"):
+    clean_text = text.strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+    try:
+        communicate = edge_tts.Communicate(clean_text, voice)
+        chunks = []
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                chunks.append(chunk["data"])
+        audio_bytes = b"".join(chunks)
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"ERROR: Natural TTS streaming failed: {e}")
+        raise HTTPException(status_code=500, detail=f"TTS streaming failed: {str(e)}")
 
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, List
@@ -755,7 +1132,7 @@ async def websocket_admin_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect_admin(websocket)
 
-@app.post("/api/webhook/whatsapp")
+@app.post("/api/webhook/whatsapp", tags=["System"], summary="Twilio WhatsApp incoming webhook")
 async def whatsapp_webhook(Body: str = Form(...), From: str = Form(...)):
     """Twilio WhatsApp webhook endpoint."""
     # Guardrail Check
@@ -776,7 +1153,7 @@ async def whatsapp_webhook(Body: str = Form(...), From: str = Form(...)):
 
     return Response(content=twiml_response, media_type="application/xml")
 
-@app.post("/api/sermons/upload")
+@app.post("/api/sermons/upload", tags=["Sermons & RAG"], summary="Upload sermon document (PDF, DOCX, TXT) to Pinecone")
 async def upload_sermon_endpoint(file: UploadFile = File(...)):
     """Admin upload endpoint supporting PDF, Word, and TXT files for dynamic vector injection."""
     if not GEMINI_API_KEY or index is None:
@@ -843,12 +1220,12 @@ async def upload_sermon_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/sermons")
+@app.get("/api/sermons", tags=["Sermons & RAG"], summary="List all indexed sermon documents")
 async def list_sermons_endpoint():
     """Returns the list of tracked uploaded documents."""
     return {"documents": load_documents()}
 
-@app.delete("/api/sermons/{filename}")
+@app.delete("/api/sermons/{filename}", tags=["Sermons & RAG"], summary="Delete sermon document from index and storage")
 async def delete_sermon_endpoint(filename: str):
     if index is None:
         raise HTTPException(status_code=503, detail="Pinecone is not configured.")
@@ -879,15 +1256,22 @@ async def delete_sermon_endpoint(filename: str):
 class PrayerRequest(BaseModel):
     request: str
 
-@app.get("/health")
+@app.get("/health", tags=["System"], summary="Health check endpoint for load balancers & monitoring")
 async def health_check():
-    """Health check endpoint for Render deployment."""
-    return {"status": "ok", "timestamp": datetime.datetime.now().isoformat()}
+    """Health check endpoint for Load Balancers, monitoring, and zero-downtime rolling deploys."""
+    db_health = await check_db_health()
+    return {
+        "status": "ok",
+        "service": "imago-api",
+        "version": "1.0.0",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "database": db_health,
+    }
 
 class PrayerResponse(BaseModel):
     prayer: str
 
-@app.post("/api/prayer", response_model=PrayerResponse)
+@app.post("/api/prayer", response_model=PrayerResponse, tags=["Prayer & Community"], summary="Generate personalized pastoral prayer")
 async def prayer_endpoint(body: PrayerRequest):
     """Generates an intercessory prayer response using the RAG pipeline with a Prayer-specific system prompt."""
     if is_crisis_detected(body.request):
@@ -971,7 +1355,7 @@ class CommunityPrayerRequest(BaseModel):
     author_name: Optional[str] = "Anonymous"
     uid: Optional[str] = None
 
-@app.post("/api/community-prayer")
+@app.post("/api/community-prayer", tags=["Prayer & Community"], summary="Post public community prayer request")
 async def post_community_prayer(body: CommunityPrayerRequest):
     import uuid
     prayers = load_community_prayers()
@@ -997,12 +1381,12 @@ async def post_community_prayer(body: CommunityPrayerRequest):
     
     return {"status": "success", "prayer": item}
 
-@app.get("/api/community-prayer")
+@app.get("/api/community-prayer", tags=["Prayer & Community"], summary="Get recent community prayer requests")
 async def get_community_prayers(limit: int = 50):
     prayers = load_community_prayers()
     return {"prayers": prayers[:limit]}
 
-@app.post("/api/community-prayer/{prayer_id}/pray")
+@app.post("/api/community-prayer/{prayer_id}/pray", tags=["Prayer & Community"], summary="Increment prayer count for a community prayer")
 async def pray_for_community_item(prayer_id: str):
     prayers = load_community_prayers()
     found = False
@@ -1087,7 +1471,7 @@ def save_devotional_cache(data: dict):
     except Exception:
         pass
 
-@app.get("/api/devotional/today")
+@app.get("/api/devotional/today", tags=["Devotionals"], summary="Get today's daily devotional guide")
 async def get_today_devotional():
     today_str = datetime.date.today().isoformat()
     cache = load_devotional_cache()
@@ -1140,7 +1524,7 @@ async def get_today_devotional():
 class YouTubeRequest(BaseModel):
     channel_url: str
 
-@app.post("/api/admin/youtube")
+@app.post("/api/admin/youtube", tags=["Admin & Ingestion"], summary="Ingest sermon transcript from YouTube channel URL")
 async def sync_youtube_channel(body: YouTubeRequest):
     import yt_dlp
     
@@ -1174,7 +1558,7 @@ async def sync_youtube_channel(body: YouTubeRequest):
 class PodcastRequest(BaseModel):
     rss_url: str
 
-@app.post("/api/admin/podcast")
+@app.post("/api/admin/podcast", tags=["Admin & Ingestion"], summary="Ingest sermon podcasts from RSS feed")
 async def sync_podcast_feed(body: PodcastRequest):
     import feedparser
     try:
@@ -1207,7 +1591,7 @@ class MoodRequest(BaseModel):
     mood: str
     intensity: float
 
-@app.post("/api/analytics/mood")
+@app.post("/api/analytics/mood", tags=["Feedback & Analytics"], summary="Log user spiritual mood / emotional state")
 async def log_mood(body: MoodRequest):
     analytics = load_analytics()
     analytics.setdefault("moods", []).append({
@@ -1218,7 +1602,7 @@ async def log_mood(body: MoodRequest):
     save_analytics(analytics)
     return {"status": "success"}
 
-@app.get("/api/admin/analytics")
+@app.get("/api/admin/analytics", tags=["Admin & Ingestion"], summary="Get admin dashboard analytics and metrics")
 async def get_analytics():
     analytics = load_analytics()
     moods = analytics.get("moods", [])
@@ -1259,6 +1643,415 @@ async def get_analytics():
         "total_moods": total_moods,
         "total_prayers": total_prayers,
         "total_documents": len(load_documents())
+    }
+
+class FeedbackPayload(BaseModel):
+    id: Optional[str] = None
+    category: str
+    category_label: Optional[str] = None
+    rating: int
+    message: str
+    email: Optional[str] = None
+    user_name: Optional[str] = None
+    screen_context: Optional[str] = "general"
+    platform: Optional[str] = "unknown"
+    app_version: Optional[str] = "1.0.0"
+    timestamp: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+@app.post("/api/feedback", tags=["Feedback & Analytics"], summary="Submit detailed user feedback")
+async def receive_user_feedback(body: FeedbackPayload):
+    feedback_list = load_feedback()
+    item = body.dict()
+    if not item.get("id"):
+        item["id"] = f"fb_{int(datetime.datetime.now().timestamp() * 1000)}"
+    if not item.get("timestamp"):
+        item["timestamp"] = datetime.datetime.now().isoformat()
+    
+    feedback_list.insert(0, item)
+    save_feedback(feedback_list)
+    print(f"INFO: Received feedback [{body.category}] {body.rating} stars: {body.message[:40]}...")
+    return {"status": "success", "id": item["id"]}
+
+class MicroFeedbackPayload(BaseModel):
+    id: Optional[str] = None
+    context_id: str
+    is_positive: bool
+    screen_context: Optional[str] = "chat"
+    note: Optional[str] = None
+    timestamp: Optional[str] = None
+
+@app.post("/api/feedback/micro", tags=["Feedback & Analytics"], summary="Submit micro-feedback survey response")
+async def receive_micro_feedback(body: MicroFeedbackPayload):
+    micro_list = load_micro_feedback()
+    item = body.dict()
+    if not item.get("id"):
+        item["id"] = f"mfb_{int(datetime.datetime.now().timestamp() * 1000)}"
+    if not item.get("timestamp"):
+        item["timestamp"] = datetime.datetime.now().isoformat()
+    micro_list.append(item)
+    save_micro_feedback(micro_list)
+    return {"status": "success"}
+
+@app.get("/api/admin/feedback", tags=["Feedback & Analytics"], summary="Retrieve all submitted user feedback")
+async def get_admin_feedback():
+    feedback_list = load_feedback()
+    micro_list = load_micro_feedback()
+    
+    # Calculate metrics
+    total_count = len(feedback_list)
+    if total_count > 0:
+        avg_rating = round(sum(f.get("rating", 5) for f in feedback_list) / total_count, 1)
+    else:
+        avg_rating = 4.9
+
+    category_counts = {}
+    for f in feedback_list:
+        cat = f.get("category", "general")
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    positive_micro = sum(1 for m in micro_list if m.get("is_positive", True))
+    negative_micro = sum(1 for m in micro_list if not m.get("is_positive", True))
+
+    return {
+        "status": "success",
+        "total_feedback": total_count,
+        "average_rating": avg_rating,
+        "category_counts": category_counts,
+        "micro_positive": positive_micro,
+        "micro_negative": negative_micro,
+        "feedback_items": feedback_list[:50]
+    }
+
+# ─── PAYMENTS & PARTNERSHIP INTEGRATION ──────────────────────────────────────
+
+class PaystackInitRequest(BaseModel):
+    email: str
+    amount: int # Amount in NGN (e.g. 5000)
+    tier: Optional[str] = "Ministry Partner"
+    frequency: Optional[str] = "monthly"
+    user_id: Optional[str] = None
+    callback_url: Optional[str] = "yoetz://payment-callback"
+
+@app.post("/api/payments/paystack/initialize", tags=["Payments"], summary="Initialize a live Paystack partnership checkout")
+async def initialize_paystack_payment(
+    body: PaystackInitRequest,
+    db: Optional[Any] = Depends(get_db_session)
+):
+    if not body.email or "@" not in body.email:
+        raise HTTPException(status_code=400, detail="A valid contributor email is required.")
+    if body.amount <= 0:
+        raise HTTPException(status_code=400, detail="Partnership amount must be greater than zero.")
+
+    reference = f"yoetz_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    amount_kobo = body.amount * 100
+
+    # Pending record
+    tx_record = {
+        "reference": reference,
+        "email": body.email.strip(),
+        "user_id": body.user_id,
+        "amount": body.amount,
+        "currency": "NGN",
+        "tier": body.tier or "Ministry Partner",
+        "frequency": body.frequency or "monthly",
+        "status": "pending",
+        "gateway": "paystack",
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "paid_at": None,
+    }
+    save_local_transaction(tx_record)
+
+    if firestore_db:
+        try:
+            firestore_db.collection("payment_transactions").document(reference).set(tx_record, merge=True)
+        except Exception as e:
+            print(f"Warning: Firestore save pending tx error: {e}")
+
+    if db and PaymentTransaction is not None:
+        try:
+            db_tx = PaymentTransaction(
+                user_id=body.user_id,
+                reference=reference,
+                email=body.email.strip(),
+                amount=amount_kobo,
+                currency="NGN",
+                partner_tier=body.tier or "Ministry Partner",
+                frequency=body.frequency or "monthly",
+                status="pending",
+                gateway="paystack",
+            )
+            db.add(db_tx)
+            await db.commit()
+        except Exception as e:
+            print(f"Warning: PostgreSQL save pending tx error: {e}")
+
+    # If Paystack secret key is configured, initialize live transaction with Paystack API
+    if PAYSTACK_SECRET_KEY:
+        try:
+            post_payload = json.dumps({
+                "email": body.email.strip(),
+                "amount": amount_kobo,
+                "reference": reference,
+                "callback_url": body.callback_url or "yoetz://payment-callback",
+                "metadata": {
+                    "user_id": body.user_id,
+                    "tier": body.tier,
+                    "frequency": body.frequency,
+                    "app": "yo-ETS",
+                }
+            }).encode("utf-8")
+
+            req = urllib.request.Request(
+                "https://api.paystack.co/transaction/initialize",
+                data=post_payload,
+                headers={
+                    "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "yo-ETS-Backend/1.0"
+                },
+                method="POST"
+            )
+
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+                if resp_data.get("status") is True and "data" in resp_data:
+                    data = resp_data["data"]
+                    return {
+                        "status": "success",
+                        "reference": reference,
+                        "authorization_url": data.get("authorization_url", ""),
+                        "access_code": data.get("access_code", ""),
+                    }
+                else:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=resp_data.get("message", "Paystack initialization failed.")
+                    )
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8") if e.fp else str(e)
+            print(f"ERROR: Paystack API HTTPError {e.code}: {err_body}")
+            raise HTTPException(status_code=502, detail=f"Paystack error: {err_body}")
+        except Exception as e:
+            print(f"ERROR: Failed to contact Paystack API: {e}")
+            raise HTTPException(status_code=502, detail=f"Payment gateway connection error: {str(e)}")
+
+    # If secret key not yet configured in .env, guide the admin/client
+    return {
+        "status": "config_required",
+        "reference": reference,
+        "message": "PAYSTACK_SECRET_KEY is not set in backend environment. Configure keys in .env to initiate live sessions.",
+        "authorization_url": ""
+    }
+
+@app.get("/api/payments/paystack/webhook", tags=["Payments"], summary="Webhook health probe and verification status")
+async def paystack_webhook_probe():
+    return {
+        "status": "active",
+        "service": "Paystack Webhook Listener",
+        "configured": bool(PAYSTACK_SECRET_KEY),
+        "message": "Endpoint is active and ready to receive POST events from Paystack."
+    }
+
+@app.post("/api/payments/paystack/webhook", tags=["Payments"], summary="Secure webhook handler for Paystack events")
+async def paystack_webhook(
+    request: Request,
+    db: Optional[Any] = Depends(get_db_session),
+    x_paystack_signature: Optional[str] = Header(None)
+):
+    body_bytes = await request.body()
+
+    # Verify HMAC SHA512 signature when PAYSTACK_SECRET_KEY is present
+    if PAYSTACK_SECRET_KEY:
+        computed_sig = hmac.new(
+            PAYSTACK_SECRET_KEY.encode("utf-8"),
+            body_bytes,
+            hashlib.sha512
+        ).hexdigest()
+
+        if not x_paystack_signature or not hmac.compare_digest(computed_sig, x_paystack_signature):
+            print("WARNING: Rejected Paystack webhook with invalid signature")
+            raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        payload = json.loads(body_bytes.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    event = payload.get("event")
+    event_data = payload.get("data", {})
+
+    if event == "charge.success":
+        reference = event_data.get("reference")
+        amount = (event_data.get("amount") or 0) // 100 # Convert kobo to NGN
+        customer = event_data.get("customer") or {}
+        email = customer.get("email", "").strip()
+        metadata = event_data.get("metadata") or {}
+        tier = metadata.get("tier", "Ministry Partner")
+        user_id = metadata.get("user_id")
+
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Update local transaction
+        tx_item = {
+            "reference": reference,
+            "email": email,
+            "user_id": user_id,
+            "amount": amount,
+            "currency": event_data.get("currency", "NGN"),
+            "tier": tier,
+            "status": "success",
+            "paid_at": now_iso,
+            "channel": event_data.get("channel"),
+            "gateway": "paystack",
+        }
+        save_local_transaction(tx_item)
+
+        if firestore_db and reference:
+            try:
+                firestore_db.collection("payment_transactions").document(reference).set(tx_item, merge=True)
+            except Exception as e:
+                print(f"Warning: Firestore webhook tx save error: {e}")
+
+        # Update PostgreSQL transaction
+        if db and PaymentTransaction is not None and reference:
+            try:
+                from sqlalchemy import select
+                stmt = select(PaymentTransaction).where(PaymentTransaction.reference == reference)
+                res = await db.execute(stmt)
+                db_tx = res.scalar_one_or_none()
+                if db_tx:
+                    db_tx.status = "success"
+                    db_tx.paid_at = datetime.datetime.now(datetime.timezone.utc)
+                    db_tx.channel = event_data.get("channel")
+                    await db.commit()
+            except Exception as e:
+                print(f"Warning: PostgreSQL webhook tx update error: {e}")
+
+        # Promote User's Partner Tier
+        await upgrade_user_partner_tier(
+            email=email,
+            tier=tier,
+            user_id=user_id,
+            amount=amount,
+            reference=reference,
+            db_session=db
+        )
+        print(f"INFO: Successfully processed charge.success for {email} ({tier}, ₦{amount:,})")
+
+    return {"status": "ok"}
+
+@app.get("/api/payments/paystack/verify/{reference}", tags=["Payments"], summary="Verify transaction status via Paystack")
+async def verify_paystack_transaction(
+    reference: str,
+    db: Optional[Any] = Depends(get_db_session)
+):
+    if not reference:
+        raise HTTPException(status_code=400, detail="Transaction reference is required.")
+
+    # If secret key is configured, query Paystack API directly
+    if PAYSTACK_SECRET_KEY:
+        try:
+            req = urllib.request.Request(
+                f"https://api.paystack.co/transaction/verify/{urllib.parse.quote(reference)}",
+                headers={
+                    "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "yo-ETS-Backend/1.0"
+                },
+                method="GET"
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+                if resp_data.get("status") is True and "data" in resp_data:
+                    data = resp_data["data"]
+                    paystack_status = data.get("status") # "success", "failed", "abandoned"
+                    amount = (data.get("amount") or 0) // 100
+                    customer = data.get("customer") or {}
+                    email = customer.get("email", "")
+                    metadata = data.get("metadata") or {}
+                    tier = metadata.get("tier", "Ministry Partner")
+                    user_id = metadata.get("user_id")
+
+                    if paystack_status == "success":
+                        # Record success and promote
+                        await upgrade_user_partner_tier(
+                            email=email,
+                            tier=tier,
+                            user_id=user_id,
+                            amount=amount,
+                            reference=reference,
+                            db_session=db
+                        )
+
+                    return {
+                        "status": "success",
+                        "payment_status": paystack_status,
+                        "reference": reference,
+                        "amount": amount,
+                        "tier": tier,
+                        "email": email,
+                    }
+        except Exception as e:
+            print(f"Warning: Direct Paystack verify error: {e}")
+
+    # Fallback to local / Firestore transaction record
+    items = load_local_transactions()
+    for item in items:
+        if item.get("reference") == reference:
+            return {
+                "status": "success",
+                "payment_status": item.get("status", "pending"),
+                "reference": reference,
+                "amount": item.get("amount", 0),
+                "tier": item.get("tier", "Ministry Partner"),
+                "email": item.get("email", ""),
+            }
+
+    return {
+        "status": "not_found",
+        "payment_status": "unknown",
+        "reference": reference,
+        "message": "Transaction not found."
+    }
+
+@app.get("/api/user/partner-tier", tags=["Payments"], summary="Fetch active partner status and tier for a user")
+async def get_user_partner_tier(
+    email: Optional[str] = None,
+    user_id: Optional[str] = None
+):
+    tier = "Free"
+    is_partner = False
+    details = {}
+
+    key = user_id or email
+    if key:
+        partners = load_local_partners()
+        clean_key = key.lower().strip()
+        if clean_key in partners:
+            details = partners[clean_key]
+            tier = details.get("partner_tier", "Free")
+            is_partner = details.get("is_partner", False)
+
+    if firestore_db and key and (not is_partner or tier == "Free"):
+        try:
+            doc = firestore_db.collection("users").document(key).get()
+            if doc.exists:
+                doc_data = doc.to_dict() or {}
+                if doc_data.get("partner_tier") and doc_data.get("partner_tier") != "Free":
+                    tier = doc_data.get("partner_tier")
+                    is_partner = True
+                    details = doc_data
+        except Exception as e:
+            print(f"Warning: Firestore partner query error: {e}")
+
+    return {
+        "status": "success",
+        "email": email,
+        "user_id": user_id,
+        "partner_tier": tier,
+        "is_partner": is_partner,
+        "details": details
     }
 
 if __name__ == "__main__":

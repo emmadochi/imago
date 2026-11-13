@@ -3,6 +3,91 @@
 import '../models/reading_plan_models.dart';
 
 final List<ReadingPlan> kReadingPlans = [
+  // 0. 9-Day Psalms of Power & Break Forth
+  ReadingPlan(
+    id: '9_day_psalms',
+    title: '9-Day Psalms of Break Forth',
+    subtitle: '9 Days of Divine Protection & Favor',
+    description: 'Immerse your spirit in 9 powerful Psalms of victory, divine shield, healing, peace, and divine break forth.',
+    durationDays: 9,
+    category: '9-Day',
+    iconName: 'auto_awesome',
+    days: [
+      ReadingPlanDay(
+        dayNumber: 1,
+        title: 'Day 1: The Shepherd\'s Provision',
+        scriptureReferences: ['Psalm 23'],
+        devotionalText:
+            'The Lord is your Shepherd; you lack nothing. He makes you lie down in green pastures and leads you beside quiet waters. He restores your soul. Even in the valley of the shadow of death, fear no evil, for His rod and staff comfort you.',
+        reflectionQuestion: 'In what area of your life do you need to trust the Shepherd’s leading and rest today?',
+      ),
+      ReadingPlanDay(
+        dayNumber: 2,
+        title: 'Day 2: Secret Place of Protection',
+        scriptureReferences: ['Psalm 91'],
+        devotionalText:
+            'Whoever dwells in the shelter of the Most High will rest in the shadow of the Almighty. He will save you from the fowler’s snare and cover you with His feathers. No harm will overtake you, no disaster will come near your tent.',
+        reflectionQuestion: 'Declare God\'s protection over your family and home as you meditate on Psalm 91.',
+      ),
+      ReadingPlanDay(
+        dayNumber: 3,
+        title: 'Day 3: Courage Over Fear',
+        scriptureReferences: ['Psalm 27'],
+        devotionalText:
+            'The Lord is my light and my salvation—whom shall I fear? The Lord is the stronghold of my life—of whom shall I be afraid? Though an army besiege me, my heart will not fear; though war break out against me, even then I will be confident.',
+        reflectionQuestion: 'What fear or uncertainty are you handing over completely to God today?',
+      ),
+      ReadingPlanDay(
+        dayNumber: 4,
+        title: 'Day 4: Deliverance & Angelic Shield',
+        scriptureReferences: ['Psalm 34'],
+        devotionalText:
+            'I sought the Lord, and He answered me; He delivered me from all my fears. Those who look to Him are radiant; their faces are never covered with shame. The angel of the Lord encamps around those who fear Him, and He delivers them.',
+        reflectionQuestion: 'Praise God for at least three specific deliverances He has worked in your journey.',
+      ),
+      ReadingPlanDay(
+        dayNumber: 5,
+        title: 'Day 5: Unshakable Refuge & Peace',
+        scriptureReferences: ['Psalm 46'],
+        devotionalText:
+            'God is our refuge and strength, an ever-present help in trouble. Therefore we will not fear, though the earth give way and the mountains fall into the heart of the sea. Be still, and know that He is God.',
+        reflectionQuestion: 'Take 2 minutes of quiet stillness to allow God\'s peace to quiet every rushing thought.',
+      ),
+      ReadingPlanDay(
+        dayNumber: 6,
+        title: 'Day 6: Divine Healing & Compassion',
+        scriptureReferences: ['Psalm 103'],
+        devotionalText:
+            'Praise the Lord, my soul, and forget not all His benefits—who forgives all your sins and heals all your diseases, who redeems your life from the pit and crowns you with love and compassion.',
+        reflectionQuestion: 'Thank God for His healing power in your spirit, mind, and physical body.',
+      ),
+      ReadingPlanDay(
+        dayNumber: 7,
+        title: 'Day 7: Constant Guardian & Guide',
+        scriptureReferences: ['Psalm 121'],
+        devotionalText:
+            'I lift up my eyes to the mountains—where does my help come from? My help comes from the Lord, the Maker of heaven and earth. The Lord will keep your going out and your coming in from this time forth and forevermore.',
+        reflectionQuestion: 'How does knowing that God never sleeps give you rest tonight?',
+      ),
+      ReadingPlanDay(
+        dayNumber: 8,
+        title: 'Day 8: Wonderfully Made & Known',
+        scriptureReferences: ['Psalm 139'],
+        devotionalText:
+            'You have searched me, Lord, and You know me. You created my inmost being; You knit me together in my mother\'s womb. I praise You because I am fearfully and wonderfully made; Your works are wonderful, I know that full well.',
+        reflectionQuestion: 'Embrace your identity as God\'s beloved creation today. What is He saying about your worth?',
+      ),
+      ReadingPlanDay(
+        dayNumber: 9,
+        title: 'Day 9: Total Praise & Victory',
+        scriptureReferences: ['Psalm 150'],
+        devotionalText:
+            'Praise God in His holy place; praise Him in His mighty heavens! Praise Him for His acts of power; praise Him for His surpassing greatness! Let everything that has breath praise the Lord. Praise the Lord!',
+        reflectionQuestion: 'Offer a hearty prayer and song of victory to conclude your 9-Day Break Forth journey!',
+      ),
+    ],
+  ),
+
   // 1. 30-Day Foundations
   ReadingPlan(
     id: '30_day_foundations',

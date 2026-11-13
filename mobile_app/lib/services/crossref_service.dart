@@ -15,18 +15,16 @@ class CrossrefService {
 
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = join(dir.path, 'bible', 'crossref.db');
+    final dbFile = File(dbPath);
 
-    // Overwrite database from assets to ensure it's not corrupted
-    if (File(dbPath).existsSync()) {
-      await File(dbPath).delete();
+    if (!dbFile.existsSync() || dbFile.lengthSync() < 100000) {
+      await Directory(join(dir.path, 'bible')).create(recursive: true);
+      final bytes = await rootBundle.load('assets/bible/crossref.db');
+      await dbFile.writeAsBytes(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes), 
+        flush: true,
+      );
     }
-    
-    await Directory(join(dir.path, 'bible')).create(recursive: true);
-    final bytes = await rootBundle.load('assets/bible/crossref.db');
-    await File(dbPath).writeAsBytes(
-      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes), 
-      flush: true
-    );
 
     _db = await openDatabase(dbPath, readOnly: true);
   }
