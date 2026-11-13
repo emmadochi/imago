@@ -78,6 +78,45 @@ PARTNERS_FILE = DATA_DIR / "partners.json"
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
 PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "").strip()
 
+def get_forward_webhook_urls() -> List[str]:
+    raw = os.getenv("PAYSTACK_FORWARD_WEBHOOKS", "").strip()
+    if not raw:
+        return []
+    urls = []
+    for chunk in raw.replace(";", ",").replace("\n", ",").split(","):
+        u = chunk.strip()
+        if u.startswith("http://") or u.startswith("https://"):
+            urls.append(u)
+    return urls
+
+async def forward_webhook_payload(target_url: str, body_bytes: bytes, signature: Optional[str]):
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "yo-ETS-Webhook-Dispatcher/1.0"
+        }
+        if signature:
+            headers["x-paystack-signature"] = signature
+
+        req = urllib.request.Request(
+            target_url,
+            data=body_bytes,
+            headers=headers,
+            method="POST"
+        )
+        def _send():
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.status
+        status = await asyncio.to_thread(_send)
+        print(f"INFO: Successfully forwarded Paystack webhook to {target_url} -> Status {status}")
+    except Exception as e:
+        print(f"WARNING: Failed to forward Paystack webhook to {target_url}: {e}")
+
+async def dispatch_webhook_to_forward_targets(body_bytes: bytes, signature: Optional[str]):
+    forward_urls = get_forward_webhook_urls()
+    for url in forward_urls:
+        asyncio.create_task(forward_webhook_payload(url, body_bytes, signature))
+
 def load_local_transactions() -> list:
     if not TRANSACTIONS_FILE.exists():
         return []
@@ -1861,14 +1900,17 @@ async def initialize_paystack_payment(
 
 @app.get("/api/payments/paystack/webhook", tags=["Payments"], summary="Webhook health probe and verification status")
 async def paystack_webhook_probe():
+    forward_urls = get_forward_webhook_urls()
     return {
         "status": "active",
-        "service": "Paystack Webhook Listener",
+        "service": "Paystack Webhook & Smart Dispatcher",
         "configured": bool(PAYSTACK_SECRET_KEY),
-        "message": "Endpoint is active and ready to receive POST events from Paystack."
+        "forwarding_enabled": len(forward_urls) > 0,
+        "forward_targets": forward_urls,
+        "message": "Endpoint is active and ready to receive and dispatch POST events from Paystack."
     }
 
-@app.post("/api/payments/paystack/webhook", tags=["Payments"], summary="Secure webhook handler for Paystack events")
+@app.post("/api/payments/paystack/webhook", tags=["Payments"], summary="Secure webhook handler & smart dispatcher for Paystack events")
 async def paystack_webhook(
     request: Request,
     db: Optional[Any] = Depends(get_db_session),
@@ -1876,7 +1918,10 @@ async def paystack_webhook(
 ):
     body_bytes = await request.body()
 
-    # Verify HMAC SHA512 signature when PAYSTACK_SECRET_KEY is present
+    # 1. Asynchronously dispatch raw payload copy to all configured downstream platforms
+    asyncio.create_task(dispatch_webhook_to_forward_targets(body_bytes, x_paystack_signature))
+
+    # 2. Verify HMAC SHA512 signature when PAYSTACK_SECRET_KEY is present
     if PAYSTACK_SECRET_KEY:
         computed_sig = hmac.new(
             PAYSTACK_SECRET_KEY.encode("utf-8"),
@@ -1898,11 +1943,23 @@ async def paystack_webhook(
 
     if event == "charge.success":
         reference = event_data.get("reference")
+        metadata = event_data.get("metadata") or {}
+        tier = metadata.get("tier", "Ministry Partner")
+
+        # Check if event belongs to yo-ETS
+        is_yoetz = (
+            (reference and str(reference).startswith("yoetz_")) or
+            (metadata.get("app") == "yo-ETS") or
+            (tier in ["Prayer Partner", "Ministry Partner", "Sustaining Partner", "Gospel Builder", "Kingdom Patron", "Visionary Partner"])
+        )
+
+        if not is_yoetz:
+            print(f"INFO: Non-yoetz Paystack event received ({reference}). Forwarded to downstream platforms.")
+            return {"status": "ok", "action": "forwarded_downstream"}
+
         amount = (event_data.get("amount") or 0) // 100 # Convert kobo to NGN
         customer = event_data.get("customer") or {}
         email = customer.get("email", "").strip()
-        metadata = event_data.get("metadata") or {}
-        tier = metadata.get("tier", "Ministry Partner")
         user_id = metadata.get("user_id")
 
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
