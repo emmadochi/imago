@@ -19,7 +19,10 @@ import docx
 import json
 import datetime
 from pathlib import Path
-import edge_tts
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
 
 # Firebase Admin setup for Firestore Cloud Persistence
 firestore_db = None
@@ -1037,6 +1040,8 @@ class NaturalTtsRequest(BaseModel):
 
 @app.post("/api/tts/natural", tags=["TTS & Audio"], summary="Generate studio-quality natural neural speech MP3")
 async def natural_tts_endpoint(body: NaturalTtsRequest):
+    if edge_tts is None:
+        raise HTTPException(status_code=503, detail="Natural TTS engine is currently unavailable.")
     clean_text = body.text.strip()
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty.")
@@ -1057,6 +1062,8 @@ async def natural_tts_endpoint(body: NaturalTtsRequest):
 
 @app.get("/api/tts/stream", tags=["TTS & Audio"], summary="Stream studio-quality natural neural speech MP3")
 async def natural_tts_stream_endpoint(text: str, voice: Optional[str] = "en-US-ChristopherNeural"):
+    if edge_tts is None:
+        raise HTTPException(status_code=503, detail="Natural TTS engine is currently unavailable.")
     clean_text = text.strip()
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty.")
