@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "org.lifechangerstouch" "\0"
-            VALUE "FileDescription", "imago" "\0"
+            VALUE "FileDescription", "yo-ETS - Digital Ministry Platform" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "imago" "\0"
+            VALUE "InternalName", "yoetz" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 org.lifechangerstouch. All rights reserved." "\0"
-            VALUE "OriginalFilename", "imago.exe" "\0"
-            VALUE "ProductName", "imago" "\0"
+            VALUE "OriginalFilename", "yoetz.exe" "\0"
+            VALUE "ProductName", "yo-ETS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

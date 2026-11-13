@@ -26,6 +26,25 @@ BOOK_FILES = [
     ('Revelation', 66)
 ]
 
+import re
+
+def clean_verse_text(text):
+    if not text:
+        return ''
+    s = re.sub(r'<RF[^>]*>[\s\S]*?(?:<\/[Rr][Ff]>|<[Rr][f]>)', '', text)
+    s = re.sub(r'<f[^>]*>[\s\S]*?<\/f>', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'<x[^>]*>[\s\S]*?<\/x>', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'<note[^>]*>[\s\S]*?<\/note>', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'<sup[^>]*>[\s\S]*?<\/sup>', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'<\/?(?:br|pb|p|P)[\s\/]*>', '\n', s)
+    s = re.sub(r'<\/?(?:CI|PI)[0-9]*>', '\n', s, flags=re.IGNORECASE)
+    s = re.sub(r'<\/t>', '\n', s, flags=re.IGNORECASE)
+    s = re.sub(r'<t>', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'<[^>]+>', '', s)
+    s = re.sub(r'[ \t\f\v]+', ' ', s)
+    s = re.sub(r'[ \t]*\n+[ \t]*', '\n', s)
+    return s.strip()
+
 def setup_db(cursor):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verses (
@@ -66,7 +85,7 @@ def main():
                 chap_num = int(chap_obj.get('chapter', 1))
                 for v_obj in chap_obj.get('verses', []):
                     v_num = int(v_obj.get('verse', 1))
-                    v_text = v_obj.get('text', '').strip()
+                    v_text = clean_verse_text(v_obj.get('text', ''))
                     
                     if v_text:
                         cursor.execute(

@@ -557,8 +557,12 @@ Interactive OpenAPI / Swagger documentation for the **Imago** backend.
     redoc_url="/redoc",
 )
 
-# Mount Admin Dashboard
-app.mount("/admin", StaticFiles(directory="app/admin", html=True), name="admin")
+# Mount Admin Dashboard (Safely resolves relative to current file)
+admin_dir = Path(__file__).resolve().parent / "admin"
+if admin_dir.exists():
+    app.mount("/admin", StaticFiles(directory=str(admin_dir), html=True), name="admin")
+elif Path("app/admin").exists():
+    app.mount("/admin", StaticFiles(directory="app/admin", html=True), name="admin")
 
 # Simulated Sermon Database for audio recommendations
 SERMONS_DB = [
